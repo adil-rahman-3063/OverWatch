@@ -4,6 +4,7 @@ import { FlipClock } from './components/FlipClock.tsx';
 import { MediaCard } from './components/MediaCard.tsx';
 import { HardwareTelemetry } from './components/HardwareTelemetry.tsx';
 import { MacroDeck } from './components/MacroDeck.tsx';
+import { ApprovalDeck } from './components/ApprovalDeck.tsx';
 import { ApprovalOverlay } from './components/ApprovalOverlay.tsx';
 import { MediaState, PermissionRequest, QuotaData, SystemStats } from './types.ts';
 
@@ -48,7 +49,7 @@ export default function App() {
   const channelRef = useRef<any>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // 1. Apple StandBy Mode: Enable Screen Wake Lock API
+  // 1. Screen Wake Lock (Keeps StandBy display awake on desk stand)
   useEffect(() => {
     let wakeLock: any = null;
     async function requestWakeLock() {
@@ -270,7 +271,6 @@ export default function App() {
     } catch {}
   };
 
-  // Track scroll position to update pagination dots
   const handleScroll = () => {
     if (scrollContainerRef.current) {
       const { scrollLeft, clientWidth } = scrollContainerRef.current;
@@ -294,9 +294,9 @@ export default function App() {
       <ApprovalOverlay requests={requests} onDecision={handleDecision} />
 
       {/* Top minimal status bar */}
-      <div className="flex items-center justify-between px-5 py-2.5 bg-black z-30 shrink-0">
+      <div className="flex items-center justify-between px-5 py-2 bg-black z-30 shrink-0 border-b border-[#141418]">
         <span className="text-[11px] font-mono text-neutral-500 font-medium tracking-wider">
-          OVERWATCH STANDBY • {deviceId}
+          STANDBY • {deviceId}
         </span>
         <div className="flex items-center gap-1.5 font-mono text-[11px] tabular-nums">
           <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-emerald-400' : 'bg-neutral-600'}`} />
@@ -306,44 +306,59 @@ export default function App() {
         </div>
       </div>
 
-      {/* Apple StandBy-style Horizontal Paginated Swipe Carousel */}
+      {/* StandBy Horizontal Paginated Swipe Carousel */}
       <main
         ref={scrollContainerRef}
         onScroll={handleScroll}
         className="flex-1 flex overflow-x-auto snap-x snap-mandatory no-scrollbar h-full w-full"
       >
-        {/* Page 1: Retro Black & White Flip Clock & Sprint Timer */}
-        <div className="w-screen h-full shrink-0 snap-center p-3 sm:p-6 flex items-center justify-center">
-          <div className="w-full max-w-4xl h-full">
+        {/* ========================================================================= */}
+        {/* SCREEN 1 (1 Big Card): Full-screen B&W Retro Split-Flap Clock             */}
+        {/* ========================================================================= */}
+        <div className="w-screen h-full shrink-0 snap-center p-3 sm:p-5 flex items-center justify-center">
+          <div className="w-full max-w-4xl h-full flex items-center justify-center">
             <FlipClock />
           </div>
         </div>
 
-        {/* Page 2: Full-screen Media Transport Controller */}
-        <div className="w-screen h-full shrink-0 snap-center p-3 sm:p-6 flex items-center justify-center">
-          <div className="w-full max-w-xl h-full">
-            <MediaCard media={media} onAction={handleMediaAction} />
+        {/* ========================================================================= */}
+        {/* SCREEN 2 (2 Cards Half & Half): Media Controller (50%) + Telemetry (50%) */}
+        {/* ========================================================================= */}
+        <div className="w-screen h-full shrink-0 snap-center p-3 sm:p-5 flex items-center justify-center">
+          <div className="w-full max-w-6xl h-full grid grid-cols-1 md:grid-cols-2 landscape:grid-cols-2 gap-3 sm:gap-4 items-stretch">
+            {/* Left Card: Media Deck (50%) */}
+            <div className="h-full">
+              <MediaCard media={media} onAction={handleMediaAction} />
+            </div>
+
+            {/* Right Card: PC Telemetry & Model Quotas (50%) */}
+            <div className="h-full">
+              <HardwareTelemetry stats={stats} quota={quota} />
+            </div>
           </div>
         </div>
 
-        {/* Page 3: Windows Hardware Telemetry & Model Limits */}
-        <div className="w-screen h-full shrink-0 snap-center p-3 sm:p-6 flex items-center justify-center">
-          <div className="w-full max-w-2xl h-full">
-            <HardwareTelemetry stats={stats} quota={quota} />
-          </div>
-        </div>
+        {/* ========================================================================= */}
+        {/* SCREEN 3 (2 Cards Half & Half): Quick Macros (50%) + Command Gate (50%)   */}
+        {/* ========================================================================= */}
+        <div className="w-screen h-full shrink-0 snap-center p-3 sm:p-5 flex items-center justify-center">
+          <div className="w-full max-w-6xl h-full grid grid-cols-1 md:grid-cols-2 landscape:grid-cols-2 gap-3 sm:gap-4 items-stretch">
+            {/* Left Card: Quick Action Macros (50%) */}
+            <div className="h-full">
+              <MacroDeck onMacro={handleMacroAction} />
+            </div>
 
-        {/* Page 4: One-Tap Macro Actions Deck */}
-        <div className="w-screen h-full shrink-0 snap-center p-3 sm:p-6 flex items-center justify-center">
-          <div className="w-full max-w-2xl h-full">
-            <MacroDeck onMacro={handleMacroAction} />
+            {/* Right Card: Agent Command Gate (50%) */}
+            <div className="h-full">
+              <ApprovalDeck requests={requests} onDecision={handleDecision} />
+            </div>
           </div>
         </div>
       </main>
 
-      {/* Minimal StandBy Pagination Dots */}
-      <div className="flex items-center justify-center gap-2 py-3 bg-black z-30 shrink-0">
-        {[0, 1, 2, 3].map((page) => (
+      {/* StandBy Pagination Dots (3 Screens) */}
+      <div className="flex items-center justify-center gap-2 py-2.5 bg-black z-30 shrink-0">
+        {[0, 1, 2].map((page) => (
           <button
             key={page}
             onClick={() => scrollToPage(page)}
@@ -352,7 +367,7 @@ export default function App() {
                 ? 'w-6 bg-white'
                 : 'w-1.5 bg-[#26262e] hover:bg-[#383844]'
             }`}
-            title={`Page ${page + 1}`}
+            title={`Screen ${page + 1}`}
           />
         ))}
       </div>
