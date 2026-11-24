@@ -1,81 +1,209 @@
-import React from 'react';
-import { ShieldAlert, Check, X, Terminal, Folder, Bot } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ShieldAlert, Check, X, Terminal, Folder, Bot, SkipForward, Minimize2 } from 'lucide-react';
 import { PermissionRequest } from '../types.ts';
 
 interface ApprovalOverlayProps {
   requests: PermissionRequest[];
-  onDecision: (requestId: string, decision: 'allow' | 'deny') => void;
+  onDecision: (requestId: string, decision: 'allow' | 'deny' | 'skip') => void;
+  onDismiss?: (requestId: string) => void;
 }
 
 export const ApprovalOverlay: React.FC<ApprovalOverlayProps> = ({ requests, onDecision }) => {
-  const pendingRequests = requests.filter((r) => r.status === 'pending');
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [secondsRemaining, setSecondsRemaining] = useState(10);
+  const [isPaused, setIsPaused] = useState(false);
+  const timerRef = useRef<any>(null);
 
-  if (pendingRequests.length === 0) return null;
+  // Filter only active pending requests (ignore anything older than 60s)
+  const now = Date.now();
+  const pendingRequests = requests.filter((r) => {
+    if (r.status !== 'pending') return false;
+    if (r.createdAt) {
+      const age = now - new Date(r.createdAt).getTime();
+      return age < 60000;
+    }
+    return true;
+  });
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150">
-      <div className="w-full max-w-lg bg-[#09090b] border border-amber-500/50 rounded-2xl p-5 shadow-2xl space-y-4">
-        {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-[#1e1e24]">
-          <div className="flex items-center gap-2">
-            <ShieldAlert className="w-4 h-4 text-amber-400" />
-            <h3 className="text-xs font-mono font-medium text-amber-300 uppercase tracking-wider">
-              Agent command interlock ({pendingRequests.length})
-            </h3>
-          </div>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">
-            Action required
+  const activeRequest = pendingRequests[0];
+  const totalPending = pendingRequests.length;
+
+  // Reset 10s timer when a new request arrives
+  useEffect(() => {
+    if (totalPending > 0) {
+      setSecondsRemaining(10);
+      setIsPaused(false);
+    }
+  }, [activeRequest?.id, totalPending]);
+
+  // 10-second countdown to auto-minimize to bottom right
+  useEffect(() => {
+    if (totalPending === 0) return;
+
+    if (!isMinimized && !isPaused) {
+      timerRef.current = setInterval(() => {
+        setSecondsRemaining((prev) => {
+          if (prev <= 1) {
+            clearInterval(timerRef.current);
+            setIsMinimized(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isMinimized, isPaused, totalPending]);
+
+  if (totalPending === 0) return null;
+
+  // =========================================================================
+  // MINIMIZED STATE: Floating circle docked at bottom right
+  // =========================================================================
+  if (isMinimized) {
+    return (
+      <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
+        <button
+          onClick={() => {
+            setIsMinimized(false);
+            setSecondsRemaining(15);
+          }}
+          className="relative flex items-center justify-center w-14 h-14 rounded-full bg-[#0a0a0f] border-2 border-amber-500/80 shadow-[0_0_25px_rgba(245,158,11,0.35)] active:scale-95 transition-all text-amber-400 group"
+          title="Open agent command approvals"
+        >
+          {/* Subtle pulsating outer ring */}
+          <span className="absolute -inset-1 rounded-full bg-amber-500/20 animate-ping opacity-75" />
+          
+          <ShieldAlert className="w-6 h-6 text-amber-400 relative z-10" />
+
+          {/* Badge count */}
+          <span className="absolute -top-1 -right-1 bg-amber-500 text-black font-mono text-[11px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-black z-20">
+            {totalPending}
           </span>
+        </button>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // EXPANDED STATE: Full Approval Overlay Card
+  // =========================================================================
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-end sm:items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150"
+      onPointerDown={() => setIsPaused(true)}
+    >
+      <div className="w-full max-w-lg bg-[#09090c] border border-amber-500/60 rounded-2xl p-4 sm:p-5 shadow-2xl space-y-3.5 relative overflow-hidden">
+        {/* Top 10-Second Countdown Progress Bar */}
+        <div className="absolute top-0 left-0 right-0 h-1 bg-neutral-900 overflow-hidden">
+          <div
+            className="h-full bg-amber-400 transition-all duration-1000 ease-linear"
+            style={{ width: `${(secondsRemaining / 10) * 100}%` }}
+          />
         </div>
 
-        {/* First Pending Request */}
-        {pendingRequests.slice(0, 1).map((req) => (
-          <div key={req.id} className="space-y-3">
+        {/* Header */}
+        <div className="flex items-center justify-between pb-2.5 border-b border-[#1c1c24]">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500" />
+            </span>
+            <h3 className="text-xs font-mono font-medium text-amber-300 uppercase tracking-wider">
+              Agent Command Interlock ({totalPending})
+            </h3>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-mono text-neutral-400">
+              {isPaused ? 'Timer paused' : `Minimizes in ${secondsRemaining}s`}
+            </span>
+            <button
+              onClick={() => setIsMinimized(true)}
+              className="p-1 rounded-lg hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors"
+              title="Minimize to bottom right"
+            >
+              <Minimize2 className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Active Pending Request */}
+        {activeRequest && (
+          <div className="space-y-3">
             <div className="flex items-center justify-between text-xs font-mono">
               <span className="flex items-center gap-1.5 text-neutral-200 font-medium">
                 <Bot className="w-3.5 h-3.5 text-cyan-400" />
-                {req.agent || 'Agent'}
+                {activeRequest.agent || 'Agent'}
               </span>
               <span className="text-[11px] text-neutral-400 px-2 py-0.5 rounded bg-[#16161c] border border-neutral-800">
-                {req.tool}
+                {activeRequest.tool}
               </span>
             </div>
 
-            {req.cwd && (
+            {activeRequest.cwd && (
               <div className="flex items-center gap-1.5 text-[10px] text-neutral-400 font-mono truncate bg-[#050507] p-2 rounded-lg border border-[#1a1a20]">
                 <Folder className="w-3 h-3 text-neutral-500 flex-shrink-0" />
-                <span className="truncate">{req.cwd}</span>
+                <span className="truncate">{activeRequest.cwd}</span>
               </div>
             )}
 
-            <div className="bg-[#050507] rounded-xl p-3 border border-[#1e1e24] font-mono text-xs text-neutral-200 break-all max-h-48 overflow-y-auto">
+            <div className="bg-[#050507] rounded-xl p-3 border border-[#1e1e24] font-mono text-xs text-neutral-200 break-all max-h-36 overflow-y-auto">
               <div className="flex items-center gap-1 text-[9px] text-neutral-500 mb-1">
                 <Terminal className="w-2.5 h-2.5 text-neutral-500" />
                 <span>Command execution</span>
               </div>
-              <code className="text-emerald-400">{req.command || '(no arguments)'}</code>
+              <code className="text-emerald-400 font-medium">{activeRequest.command || '(no command string)'}</code>
             </div>
 
-            {/* Giant Tactile Touch Pads */}
-            <div className="grid grid-cols-2 gap-3 pt-2">
+            {/* Giant Tactile Touch Action Pads: Skip | Deny | Allow */}
+            <div className="grid grid-cols-3 gap-2.5 pt-1">
+              {/* Skip Button: Dismisses from mobile so user can act on laptop */}
               <button
-                onClick={() => onDecision(req.id, 'deny')}
-                className="h-14 rounded-xl bg-[#0e0e12] border border-rose-500/40 hover:border-rose-500 text-rose-400 font-mono text-xs font-medium flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                onClick={() => onDecision(activeRequest.id, 'skip')}
+                className="h-12 rounded-xl bg-[#121217] border border-neutral-700 hover:border-neutral-500 text-neutral-300 font-mono text-xs font-medium flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
+                title="Dismiss from phone (decide on laptop)"
+              >
+                <SkipForward className="w-3.5 h-3.5 text-neutral-400" />
+                <span>Skip</span>
+              </button>
+
+              {/* Deny Button */}
+              <button
+                onClick={() => onDecision(activeRequest.id, 'deny')}
+                className="h-12 rounded-xl bg-[#140b0e] border border-rose-500/50 hover:border-rose-500 text-rose-400 font-mono text-xs font-medium flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
               >
                 <X className="w-4 h-4" />
-                <span>Deny command</span>
+                <span>Deny</span>
               </button>
 
+              {/* Allow Button */}
               <button
-                onClick={() => onDecision(req.id, 'allow')}
-                className="h-14 rounded-xl bg-white text-black hover:bg-neutral-200 font-mono text-xs font-medium flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                onClick={() => onDecision(activeRequest.id, 'allow')}
+                className="h-12 rounded-xl bg-white text-black hover:bg-neutral-200 font-mono text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-lg shadow-white/10"
               >
                 <Check className="w-4 h-4 stroke-[3]" />
-                <span>Allow execution</span>
+                <span>Allow</span>
               </button>
             </div>
+
+            {/* If more than 1 request is pending, offer "Approve All" */}
+            {totalPending > 1 && (
+              <button
+                onClick={() => {
+                  pendingRequests.forEach((req) => onDecision(req.id, 'allow'));
+                }}
+                className="w-full py-2 rounded-lg bg-[#14141c] border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 font-mono text-[11px] font-medium flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <Check className="w-3 h-3 stroke-[3]" />
+                <span>Approve All ({totalPending}) Pending Commands</span>
+              </button>
+            )}
           </div>
-        ))}
+        )}
       </div>
     </div>
   );

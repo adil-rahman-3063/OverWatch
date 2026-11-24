@@ -118,13 +118,14 @@ export class SupabaseService {
     });
   }
 
-  private resolveDecision(requestId: string, decision: 'allow' | 'deny'): void {
+  private resolveDecision(requestId: string, decision: 'allow' | 'deny' | 'skip'): void {
     const pending = this.pendingRequests.get(requestId);
     if (pending) {
       clearTimeout(pending.timer);
       this.pendingRequests.delete(requestId);
-      pending.resolve(decision);
-      console.log(`[Supabase] Resolved request [${requestId}] with decision: ${decision}`);
+      const hookDecision = decision === 'allow' ? 'allow' : decision === 'deny' ? 'deny' : 'ask';
+      pending.resolve(hookDecision);
+      console.log(`[Supabase] Resolved request [${requestId}] with decision: ${hookDecision}`);
     }
   }
 

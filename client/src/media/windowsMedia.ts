@@ -1,5 +1,7 @@
-import { exec, spawn } from 'child_process';
+import { exec } from 'child_process';
 import util from 'util';
+import path from 'path';
+import fs from 'fs';
 
 const execPromise = util.promisify(exec);
 
@@ -11,55 +13,6 @@ export interface MediaInfo {
   sourceAppId?: string | null;
   updatedAt: string;
 }
-
-// PowerShell script to query WinRT GlobalSystemMediaTransportControls
-const GET_MEDIA_SCRIPT = `
-try {
-    Add-Type -AssemblyName System.Runtime.WindowsRuntime -ErrorAction Stop
-    $asTaskGeneric = [System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object { $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation\`1' }
-
-    function Await-AsyncOp($asyncOp, $type) {
-        $method = $asTaskGeneric.MakeGenericMethod($type)
-        $task = $method.Invoke($null, @($asyncOp))
-        $task.Wait()
-        return $task.Result
-    }
-
-    [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager,Windows.Media,ContentType=WindowsRuntime] | Out-Null
-    $managerAsync = [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()
-    $manager = Await-AsyncOp $managerAsync ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager])
-
-    $session = $manager.GetCurrentSession()
-    if ($session) {
-        $propsAsync = $session.TryGetMediaPropertiesAsync()
-        $props = Await-AsyncOp $propsAsync ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties])
-        $playbackInfo = $session.GetPlaybackInfo()
-        [PSCustomObject]@{
-            title = if ($props.Title) { $props.Title } else { "" }
-            artist = if ($props.Artist) { $props.Artist } else { "" }
-            album = if ($props.AlbumTitle) { $props.AlbumTitle } else { "" }
-            playbackStatus = if ($playbackInfo) { $playbackInfo.PlaybackStatus.ToString() } else { "Stopped" }
-            sourceAppId = $session.SourceAppId
-        } | ConvertTo-Json -Compress
-    } else {
-        [PSCustomObject]@{
-            title = ""
-            artist = ""
-            album = ""
-            playbackStatus = "NoActiveSession"
-            sourceAppId = $null
-        } | ConvertTo-Json -Compress
-    }
-} catch {
-    [PSCustomObject]@{
-        title = ""
-        artist = ""
-        album = ""
-        playbackStatus = "Stopped"
-        error = $_.Exception.Message
-    } | ConvertTo-Json -Compress
-}
-`;
 
 // Virtual key codes for Win32 keybd_event
 const MEDIA_KEYS: Record<string, number> = {
@@ -73,6 +26,7 @@ const MEDIA_KEYS: Record<string, number> = {
 };
 
 export class WindowsMediaController {
+  private scriptPath: string;
   private lastMediaInfo: MediaInfo = {
     title: '',
     artist: '',
@@ -81,16 +35,38 @@ export class WindowsMediaController {
     updatedAt: new Date().toISOString(),
   };
 
+  constructor() {
+    // Locate get-media.ps1 relative to dist or src or root
+    const candidates = [
+      path.resolve(__dirname, '../../scripts/get-media.ps1'),
+      path.resolve(__dirname, '../scripts/get-media.ps1'),
+      path.resolve(process.cwd(), 'scripts/get-media.ps1'),
+      path.resolve(process.cwd(), 'client/scripts/get-media.ps1'),
+      'c:\\Users\\adilr\\Documents\\open-source\\OverWatch\\client\\scripts\\get-media.ps1',
+    ];
+
+    const found = candidates.find((p) => fs.existsSync(p));
+    this.scriptPath = found || candidates[0];
+  }
+
   /**
    * Retrieves the currently playing media session information using WinRT.
    */
   async getCurrentMedia(): Promise<MediaInfo> {
     try {
-      // Run powershell without profile for speed
-      const command = `powershell -NoProfile -NonInteractive -Command "${GET_MEDIA_SCRIPT.replace(/\r?\n/g, ' ')}"`;
+      if (!fs.existsSync(this.scriptPath)) {
+        return this.lastMediaInfo;
+      }
+
+      const command = `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${this.scriptPath}"`;
       const { stdout } = await execPromise(command, { timeout: 3500 });
-      
-      const parsed = JSON.parse(stdout.trim());
+
+      const trimmed = stdout.trim();
+      if (!trimmed) {
+        return this.lastMediaInfo;
+      }
+
+      const parsed = JSON.parse(trimmed);
       this.lastMediaInfo = {
         title: parsed.title || '',
         artist: parsed.artist || '',

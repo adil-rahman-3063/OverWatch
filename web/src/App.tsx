@@ -8,6 +8,10 @@ import { ClipboardBeam } from './components/ClipboardBeam.tsx';
 import { ApprovalOverlay } from './components/ApprovalOverlay.tsx';
 import { MediaState, PermissionRequest, QuotaData, SystemStats } from './types.ts';
 
+// 1-pixel silent base64 MP4 video for iOS/Android keep-awake fallback
+const SILENT_VIDEO_B64 =
+  'data:video/mp4;base64,AAAAHGZ0eXBtcDQyAAAAAG1wNDJpc29tYXZjMQAAAAhmcmVlAAAAG21kYXRhAAAC/AYF//+43UAAAAAABHB1cnAAAAALbXZoZAAAAAB3iJ1bd4idWwAAAPoAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAEAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+
 function playAlertChime() {
   try {
     const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -49,27 +53,51 @@ export default function App() {
 
   const channelRef = useRef<any>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
-  // 1. Screen Wake Lock (Keeps StandBy display awake on desk stand)
+  // =========================================================================
+  // 1. Bulletproof Screen Wake Lock (Native API + Silent Video Keep-Alive)
+  // Keeps StandBy display strictly awake without changing OS settings!
+  // =========================================================================
   useEffect(() => {
     let wakeLock: any = null;
-    async function requestWakeLock() {
+
+    async function acquireWakeLock() {
       try {
         if ('wakeLock' in navigator) {
           wakeLock = await (navigator as any).wakeLock.request('screen');
         }
       } catch {}
+
+      // Start silent video loop for iOS/Android power-saving browsers
+      if (videoRef.current && videoRef.current.paused) {
+        videoRef.current.play().catch(() => {});
+      }
     }
-    requestWakeLock();
+
+    // Try immediately on load
+    acquireWakeLock();
+
+    // Re-acquire on user interaction (touch/click/pointer) as required by mobile policies
+    const handleUserInteraction = () => {
+      acquireWakeLock();
+    };
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        requestWakeLock();
+        acquireWakeLock();
       }
     };
+
+    window.addEventListener('touchstart', handleUserInteraction, { passive: true });
+    window.addEventListener('pointerdown', handleUserInteraction, { passive: true });
+    window.addEventListener('click', handleUserInteraction, { passive: true });
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
+      window.removeEventListener('touchstart', handleUserInteraction);
+      window.removeEventListener('pointerdown', handleUserInteraction);
+      window.removeEventListener('click', handleUserInteraction);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (wakeLock) {
         wakeLock.release().catch(() => {});
@@ -77,7 +105,9 @@ export default function App() {
     };
   }, []);
 
+  // =========================================================================
   // 2. Supabase Realtime Setup
+  // =========================================================================
   useEffect(() => {
     async function loadInitialData() {
       try {
@@ -194,7 +224,7 @@ export default function App() {
         setRequests((prev) =>
           prev.map((r) =>
             r.id === payload.requestId
-              ? { ...r, status: payload.decision === 'allow' ? 'allowed' : 'denied' }
+              ? { ...r, status: payload.decision === 'allow' ? 'allowed' : payload.decision === 'deny' ? 'denied' : 'expired' }
               : r
           )
         );
@@ -277,9 +307,13 @@ export default function App() {
     }
   };
 
-  const handleDecision = async (requestId: string, decision: 'allow' | 'deny') => {
+  const handleDecision = async (requestId: string, decision: 'allow' | 'deny' | 'skip') => {
     setRequests((prev) =>
-      prev.map((r) => (r.id === requestId ? { ...r, status: decision === 'allow' ? 'allowed' : 'denied' } : r))
+      prev.map((r) =>
+        r.id === requestId
+          ? { ...r, status: decision === 'allow' ? 'allowed' : decision === 'deny' ? 'denied' : 'expired' }
+          : r
+      )
     );
 
     if (channelRef.current) {
@@ -290,12 +324,14 @@ export default function App() {
       });
     }
 
-    try {
-      await supabase
-        .from('permission_requests')
-        .update({ status: decision === 'allow' ? 'allowed' : 'denied' })
-        .eq('id', requestId);
-    } catch {}
+    if (decision !== 'skip') {
+      try {
+        await supabase
+          .from('permission_requests')
+          .update({ status: decision === 'allow' ? 'allowed' : 'denied' })
+          .eq('id', requestId);
+      } catch {}
+    }
   };
 
   const handleScroll = () => {
@@ -317,7 +353,19 @@ export default function App() {
 
   return (
     <div className="h-screen w-screen bg-black text-[#f4f4f5] flex flex-col overflow-hidden relative font-sans antialiased select-none">
-      {/* Floating Permission Interlock Modal */}
+      {/* Invisible silent keep-awake video tag for mobile browsers */}
+      <video
+        ref={videoRef}
+        src={SILENT_VIDEO_B64}
+        playsInline
+        webkit-playsinline="true"
+        loop
+        muted
+        autoPlay
+        className="hidden pointer-events-none opacity-0 w-0 h-0"
+      />
+
+      {/* Floating Permission Interlock Modal with 10s auto-minimize & Skip */}
       <ApprovalOverlay requests={requests} onDecision={handleDecision} />
 
       {/* Top minimal status bar */}
