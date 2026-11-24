@@ -51,15 +51,20 @@ async function main() {
 
     if (response.ok) {
       const result: any = await response.json();
-      process.stdout.write(JSON.stringify({ decision: result.decision || 'ask' }));
+      const decision = result.decision;
+      if (decision === 'allow') {
+        process.stdout.write(JSON.stringify({ decision: 'allow' }));
+      } else {
+        process.stdout.write(JSON.stringify({ decision: 'deny' }));
+      }
       process.exit(0);
     } else {
-      process.stdout.write(JSON.stringify({ decision: 'ask' }));
+      process.stdout.write(JSON.stringify({ decision: 'deny' }));
       process.exit(0);
     }
   } catch {
-    // Daemon offline -> fallback to terminal prompt
-    process.stdout.write(JSON.stringify({ decision: 'ask' }));
+    // Fail-closed
+    process.stdout.write(JSON.stringify({ decision: 'deny' }));
     process.exit(0);
   }
 }

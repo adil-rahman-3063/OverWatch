@@ -9,35 +9,11 @@ import { ApprovalOverlay } from './components/ApprovalOverlay.tsx';
 import { PinLock } from './components/PinLock.tsx';
 import { Lock } from 'lucide-react';
 import { MediaState, PermissionRequest, QuotaData, SystemStats } from './types.ts';
+import { playAlertRingtone } from './utils/sound.ts';
 
 // 1-pixel silent base64 MP4 video for iOS/Android keep-awake fallback
 const SILENT_VIDEO_B64 =
   'data:video/mp4;base64,AAAAHGZ0eXBtcDQyAAAAAG1wNDJpc29tYXZjMQAAAAhmcmVlAAAAG21kYXRhAAAC/AYF//+43UAAAAAABHB1cnAAAAALbXZoZAAAAAB3iJ1bd4idWwAAAPoAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAEAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
-
-function playAlertChime() {
-  try {
-    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15);
-
-    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
-
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.35);
-
-    if (navigator.vibrate) {
-      navigator.vibrate([80, 40, 80]);
-    }
-  } catch {}
-}
 
 const EXPECTED_PIN = import.meta.env.VITE_ACCESS_PIN || '123456';
 
@@ -50,6 +26,8 @@ export default function App() {
   });
   const [connected, setConnected] = useState(false);
   const [activePageIndex, setActivePageIndex] = useState(0);
+  const [isClockVisible, setIsClockVisible] = useState(true);
+  const clockContainerRef = useRef<HTMLDivElement>(null);
   const [media, setMedia] = useState<MediaState>({
     title: '',
     artist: '',
@@ -216,7 +194,7 @@ export default function App() {
 
     channel.on('broadcast', { event: 'permission:request' }, ({ payload }) => {
       if (payload?.id) {
-        playAlertChime();
+        playAlertRingtone();
         setRequests((prev) => [
           {
             id: payload.id,
@@ -252,7 +230,7 @@ export default function App() {
         (payload) => {
           const newReq = payload.new as any;
           if (newReq && newReq.device_id === deviceId && newReq.status === 'pending') {
-            playAlertChime();
+            playAlertRingtone();
             setRequests((prev) => [
               {
                 id: newReq.id,
@@ -347,6 +325,21 @@ export default function App() {
     }
   };
 
+  // Observe clock screen visibility to mute mechanical flip sound when swiped to Screen 2 or 3
+  useEffect(() => {
+    if (!clockContainerRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          setIsClockVisible(entry.isIntersecting && entry.intersectionRatio > 0.4);
+        }
+      },
+      { threshold: [0.1, 0.4, 0.7] }
+    );
+    observer.observe(clockContainerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
   const handleScroll = () => {
     if (scrollContainerRef.current) {
       const { scrollLeft, clientWidth } = scrollContainerRef.current;
@@ -426,9 +419,9 @@ export default function App() {
         {/* ========================================================================= */}
         {/* SCREEN 1 (1 Big Card): Full-screen B&W Retro Split-Flap Clock             */}
         {/* ========================================================================= */}
-        <div className="w-screen h-full shrink-0 snap-center p-3 sm:p-5 flex items-center justify-center">
+        <div ref={clockContainerRef} className="w-screen h-full shrink-0 snap-center p-3 sm:p-5 flex items-center justify-center">
           <div className="w-full max-w-4xl h-full flex items-center justify-center">
-            <FlipClock />
+            <FlipClock isActive={isClockVisible && activePageIndex === 0} />
           </div>
         </div>
 

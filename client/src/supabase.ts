@@ -115,8 +115,14 @@ export class SupabaseService {
       )
       .subscribe();
 
-    await this.channel.subscribe((status) => {
+    this.channel.subscribe((status) => {
       console.log(`[Supabase] Realtime channel status: ${status}`);
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.warn(`[Supabase] Re-subscribing in 2.5s due to ${status}...`);
+        setTimeout(() => {
+          this.channel?.subscribe();
+        }, 2500);
+      }
     });
   }
 
@@ -125,7 +131,8 @@ export class SupabaseService {
     if (pending) {
       clearTimeout(pending.timer);
       this.pendingRequests.delete(requestId);
-      const hookDecision = decision === 'allow' ? 'allow' : decision === 'deny' ? 'deny' : 'ask';
+      // Strict fail-closed: Only explicit 'allow' approves. Any denial or skip denies.
+      const hookDecision = decision === 'allow' ? 'allow' : 'deny';
       pending.resolve(hookDecision);
       console.log(`[Supabase] Resolved request [${requestId}] with decision: ${hookDecision}`);
     }

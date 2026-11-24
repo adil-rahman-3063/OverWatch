@@ -3,7 +3,10 @@ import { Timer, RotateCcw, Play, Pause, Volume2, VolumeX } from 'lucide-react';
 
 let audioCtx: AudioContext | null = null;
 
-function playMechanicalFlipSound() {
+function playMechanicalFlipSound(isActive: boolean = true) {
+  if (!isActive) return;
+  if (typeof document !== 'undefined' && document.hidden) return;
+
   try {
     if (!audioCtx) {
       audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -73,7 +76,7 @@ const SplitFlapDigit: React.FC<SplitFlapDigitProps> = ({ current, previous, soun
       setIsFlipping(true);
 
       if (soundEnabled) {
-        playMechanicalFlipSound();
+        playMechanicalFlipSound(soundEnabled);
       }
 
       const timer = setTimeout(() => {
@@ -178,7 +181,11 @@ const TwoDigitFlipGroup: React.FC<TwoDigitFlipGroupProps> = ({
   );
 };
 
-export const FlipClock: React.FC = () => {
+interface FlipClockProps {
+  isActive?: boolean;
+}
+
+export const FlipClock: React.FC<FlipClockProps> = ({ isActive = true }) => {
   const [time, setTime] = useState(new Date());
   const [prevTime, setPrevTime] = useState(new Date());
   const [isSprintMode, setIsSprintMode] = useState(false);
@@ -186,6 +193,18 @@ export const FlipClock: React.FC = () => {
   const [prevSprintSeconds, setPrevSprintSeconds] = useState(25 * 60);
   const [sprintRunning, setSprintRunning] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
+
+  // Mechanical sound plays only when sound is enabled AND clock screen is active
+  const effectiveSound = soundEnabled && isActive;
+
+  // Suspend AudioContext when clock page is not active or hidden to ensure absolute silence
+  useEffect(() => {
+    if (!effectiveSound && audioCtx && audioCtx.state === 'running') {
+      try {
+        audioCtx.suspend();
+      } catch {}
+    }
+  }, [effectiveSound]);
 
   // Clock 1-second ticker
   useEffect(() => {
@@ -299,7 +318,7 @@ export const FlipClock: React.FC = () => {
               value={hoursStr}
               previous={prevHoursStr}
               label="Hours"
-              soundEnabled={soundEnabled}
+              soundEnabled={effectiveSound}
             />
 
             <span className="font-mono text-2xl sm:text-4xl text-neutral-600 font-bold -mt-4">:</span>
@@ -309,7 +328,7 @@ export const FlipClock: React.FC = () => {
               value={minutesStr}
               previous={prevMinutesStr}
               label="Minutes"
-              soundEnabled={soundEnabled}
+              soundEnabled={effectiveSound}
             />
 
             {/* Seconds (Hidden on very tiny mobile, visible sm+) */}
@@ -319,7 +338,7 @@ export const FlipClock: React.FC = () => {
                 value={secondsStr}
                 previous={prevSecondsStr}
                 label="Seconds"
-                soundEnabled={soundEnabled}
+                soundEnabled={effectiveSound}
               />
             </div>
           </>
@@ -330,7 +349,7 @@ export const FlipClock: React.FC = () => {
               value={sprintMin}
               previous={prevSprintMin}
               label="Minutes"
-              soundEnabled={soundEnabled}
+              soundEnabled={effectiveSound}
             />
 
             <span className="font-mono text-2xl sm:text-4xl text-neutral-600 font-bold -mt-4">:</span>
@@ -340,7 +359,7 @@ export const FlipClock: React.FC = () => {
               value={sprintSec}
               previous={prevSprintSec}
               label="Seconds"
-              soundEnabled={soundEnabled}
+              soundEnabled={effectiveSound}
             />
           </>
         )}

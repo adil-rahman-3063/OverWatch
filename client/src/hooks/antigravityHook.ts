@@ -35,7 +35,7 @@ async function main() {
       hookInput = JSON.parse(raw);
     }
   } catch (err) {
-    process.stdout.write(JSON.stringify({ decision: 'ask', reason: 'Failed to parse hook stdin' }));
+    process.stdout.write(JSON.stringify({ decision: 'deny', reason: 'Failed to parse hook stdin' }));
     process.exit(0);
   }
 
@@ -49,7 +49,7 @@ async function main() {
 
   try {
     const controller = new AbortController();
-    // Allow up to 48 seconds for mobile response before falling back to local ask
+    // Allow up to 48 seconds for mobile response before timing out
     const timeout = setTimeout(() => controller.abort(), 48000);
 
     const response = await fetch(url, {
@@ -68,29 +68,44 @@ async function main() {
 
     if (response.ok) {
       const result: any = await response.json();
-      const decision = result.decision || 'ask';
+      const decision = result.decision;
 
-      const payload: Record<string, any> = {
-        decision: decision === 'allow' ? 'allow' : decision === 'deny' ? 'deny' : 'ask',
-        reason: `OverWatch mobile remote decision: ${decision}`,
-      };
-
-      if (decision === 'allow' && command) {
-        const firstWord = command.split(/\s+/)[0];
-        payload.permissionOverrides = [`command(${firstWord})`];
+      // Fail-closed security: ONLY execute if phone explicitly approved 'allow'
+      if (decision === 'allow') {
+        const payload: Record<string, any> = {
+          decision: 'allow',
+          reason: 'OverWatch mobile confirmed and approved command execution.',
+        };
+        if (command) {
+          const firstWord = command.split(/\s+/)[0];
+          payload.permissionOverrides = [`command(${firstWord})`];
+        }
+        process.stdout.write(JSON.stringify(payload));
+        process.exit(0);
+      } else {
+        process.stdout.write(
+          JSON.stringify({
+            decision: 'deny',
+            reason: `OverWatch mobile rejected command (decision: ${decision || 'denied'}).`,
+          })
+        );
+        process.exit(0);
       }
-
-      process.stdout.write(JSON.stringify(payload));
-      process.exit(0);
     } else {
-      process.stdout.write(JSON.stringify({ decision: 'ask', reason: 'Daemon returned non-200' }));
+      process.stdout.write(
+        JSON.stringify({
+          decision: 'deny',
+          reason: 'OverWatch daemon returned non-200. Fail-closed: command blocked.',
+        })
+      );
       process.exit(0);
     }
   } catch (err: any) {
+    // If mobile times out, disconnected, or daemon offline -> STRICT FAIL-CLOSED (DENY)
     process.stdout.write(
       JSON.stringify({
-        decision: 'ask',
-        reason: 'OverWatch mobile confirmation timed out or offline; falling back to local prompt.',
+        decision: 'deny',
+        reason: 'OverWatch mobile approval not granted (timed out or offline). Command blocked.',
       })
     );
     process.exit(0);

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ShieldAlert, Check, X, Terminal, Folder, Bot, SkipForward, Minimize2 } from 'lucide-react';
 import { PermissionRequest } from '../types.ts';
+import { playAlertRingtone } from '../utils/sound.ts';
 
 interface ApprovalOverlayProps {
   requests: PermissionRequest[];
@@ -10,7 +11,7 @@ interface ApprovalOverlayProps {
 
 export const ApprovalOverlay: React.FC<ApprovalOverlayProps> = ({ requests, onDecision }) => {
   const [isMinimized, setIsMinimized] = useState(false);
-  const [secondsRemaining, setSecondsRemaining] = useState(10);
+  const [secondsRemaining, setSecondsRemaining] = useState(20);
   const [isPaused, setIsPaused] = useState(false);
   const timerRef = useRef<any>(null);
 
@@ -28,15 +29,18 @@ export const ApprovalOverlay: React.FC<ApprovalOverlayProps> = ({ requests, onDe
   const activeRequest = pendingRequests[0];
   const totalPending = pendingRequests.length;
 
-  // Reset 10s timer when a new request arrives
+  // Reset 20s timer when a new request arrives
   useEffect(() => {
     if (totalPending > 0) {
-      setSecondsRemaining(10);
+      setSecondsRemaining(20);
       setIsPaused(false);
+      try {
+        playAlertRingtone();
+      } catch {}
     }
   }, [activeRequest?.id, totalPending]);
 
-  // 10-second countdown to auto-minimize to bottom right
+  // 20-second countdown to auto-minimize to bottom right
   useEffect(() => {
     if (totalPending === 0) return;
 
@@ -69,7 +73,7 @@ export const ApprovalOverlay: React.FC<ApprovalOverlayProps> = ({ requests, onDe
         <button
           onClick={() => {
             setIsMinimized(false);
-            setSecondsRemaining(15);
+            setSecondsRemaining(20);
           }}
           className="relative flex items-center justify-center w-14 h-14 rounded-full bg-[#0a0a0f] border-2 border-amber-500/80 shadow-[0_0_25px_rgba(245,158,11,0.35)] active:scale-95 transition-all text-amber-400 group"
           title="Open agent command approvals"
@@ -97,11 +101,11 @@ export const ApprovalOverlay: React.FC<ApprovalOverlayProps> = ({ requests, onDe
       onPointerDown={() => setIsPaused(true)}
     >
       <div className="w-full max-w-lg bg-[#09090c] border border-amber-500/60 rounded-2xl p-4 sm:p-5 shadow-2xl space-y-3.5 relative overflow-hidden">
-        {/* Top 10-Second Countdown Progress Bar */}
+        {/* Top 20-Second Countdown Progress Bar */}
         <div className="absolute top-0 left-0 right-0 h-1 bg-neutral-900 overflow-hidden">
           <div
             className="h-full bg-amber-400 transition-all duration-1000 ease-linear"
-            style={{ width: `${(secondsRemaining / 10) * 100}%` }}
+            style={{ width: `${(secondsRemaining / 20) * 100}%` }}
           />
         </div>
 

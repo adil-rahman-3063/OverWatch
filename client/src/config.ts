@@ -11,7 +11,7 @@ export const config = {
   supabaseAnonKey: process.env.SUPABASE_ANON_KEY || '',
   deviceId: process.env.DEVICE_ID || 'default',
   localIpcPort: parseInt(process.env.LOCAL_IPC_PORT || '49152', 10),
-  fallbackDecision: (process.env.FALLBACK_DECISION || 'ask') as 'ask' | 'deny',
+  fallbackDecision: (process.env.FALLBACK_DECISION || 'deny') as 'ask' | 'deny',
   quotaPollIntervalMs: parseInt(process.env.QUOTA_POLL_INTERVAL_MS || '120000', 10),
   mediaPollIntervalMs: parseInt(process.env.MEDIA_POLL_INTERVAL_MS || '2500', 10),
   permissionTimeoutMs: 50000, // 50 seconds before auto-fallback
