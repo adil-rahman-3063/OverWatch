@@ -1,8 +1,20 @@
+export interface MediaSessionItem {
+  index: number;
+  title: string;
+  artist: string;
+  album: string;
+  playbackStatus: 'Playing' | 'Paused' | 'Stopped';
+  sourceAppId?: string;
+}
+
 export interface MediaState {
   title: string;
   artist: string;
   album: string;
   playbackStatus: 'Playing' | 'Paused' | 'Stopped' | 'NoActiveSession';
+  sourceAppId?: string | null;
+  sessions?: MediaSessionItem[];
+  activeSessionIndex?: number;
   updatedAt?: string;
 }
 

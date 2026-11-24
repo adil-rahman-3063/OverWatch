@@ -178,6 +178,9 @@ export default function App() {
           artist: payload.artist || '',
           album: payload.album || '',
           playbackStatus: payload.playbackStatus || 'Stopped',
+          sourceAppId: payload.sourceAppId,
+          sessions: payload.sessions || [],
+          activeSessionIndex: payload.activeSessionIndex || 0,
           updatedAt: payload.updatedAt,
         });
       }
@@ -267,12 +270,12 @@ export default function App() {
     };
   }, []);
 
-  const handleMediaAction = async (action: string) => {
+  const handleMediaAction = async (action: string, sessionIndex?: number) => {
     if (channelRef.current) {
       await channelRef.current.send({
         type: 'broadcast',
         event: 'media:action',
-        payload: { action },
+        payload: { action, sessionIndex },
       });
     }
   };

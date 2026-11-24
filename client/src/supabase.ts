@@ -40,15 +40,17 @@ export class SupabaseService {
       },
     });
 
-    // 1. Media Actions
+    // 1. Media Actions (targeted per session or global)
     this.channel.on('broadcast', { event: 'media:action' }, async ({ payload }) => {
       const action = payload?.action;
+      const sessionIndex = typeof payload?.sessionIndex === 'number' ? payload.sessionIndex : -1;
       if (action) {
-        await mediaController.sendMediaCommand(action);
+        console.log(`[Supabase] Received media:action: ${action} (sessionIndex: ${sessionIndex})`);
+        await mediaController.sendMediaCommand(action, sessionIndex);
         setTimeout(async () => {
           const updated = await mediaController.getCurrentMedia();
           await this.publishMediaState(updated);
-        }, 300);
+        }, 350);
       }
     });
 

@@ -5,39 +5,41 @@ import fs from 'fs';
 
 const execPromise = util.promisify(exec);
 
+export interface MediaSessionItem {
+  index: number;
+  title: string;
+  artist: string;
+  album: string;
+  playbackStatus: 'Playing' | 'Paused' | 'Stopped';
+  sourceAppId?: string;
+}
+
 export interface MediaInfo {
   title: string;
   artist: string;
   album: string;
   playbackStatus: 'Playing' | 'Paused' | 'Stopped' | 'NoActiveSession';
   sourceAppId?: string | null;
+  sessions?: MediaSessionItem[];
+  activeSessionIndex?: number;
   updatedAt: string;
 }
 
-// Virtual key codes for Win32 keybd_event
-const MEDIA_KEYS: Record<string, number> = {
-  play_pause: 0xB3,
-  next: 0xB0,
-  prev: 0xB1,
-  stop: 0xB2,
-  volume_mute: 0xAD,
-  volume_down: 0xAE,
-  volume_up: 0xAF,
-};
-
 export class WindowsMediaController {
-  private scriptPath: string;
+  private getScriptPath: string;
+  private sendScriptPath: string;
   private lastMediaInfo: MediaInfo = {
     title: '',
     artist: '',
     album: '',
     playbackStatus: 'Stopped',
+    sessions: [],
+    activeSessionIndex: 0,
     updatedAt: new Date().toISOString(),
   };
 
   constructor() {
-    // Locate get-media.ps1 relative to dist or src or root
-    const candidates = [
+    const getCandidates = [
       path.resolve(__dirname, '../../scripts/get-media.ps1'),
       path.resolve(__dirname, '../scripts/get-media.ps1'),
       path.resolve(process.cwd(), 'scripts/get-media.ps1'),
@@ -45,20 +47,31 @@ export class WindowsMediaController {
       'c:\\Users\\adilr\\Documents\\open-source\\OverWatch\\client\\scripts\\get-media.ps1',
     ];
 
-    const found = candidates.find((p) => fs.existsSync(p));
-    this.scriptPath = found || candidates[0];
+    const sendCandidates = [
+      path.resolve(__dirname, '../../scripts/send-media.ps1'),
+      path.resolve(__dirname, '../scripts/send-media.ps1'),
+      path.resolve(process.cwd(), 'scripts/send-media.ps1'),
+      path.resolve(process.cwd(), 'client/scripts/send-media.ps1'),
+      'c:\\Users\\adilr\\Documents\\open-source\\OverWatch\\client\\scripts\\send-media.ps1',
+    ];
+
+    const foundGet = getCandidates.find((p) => fs.existsSync(p));
+    this.getScriptPath = foundGet || getCandidates[0];
+
+    const foundSend = sendCandidates.find((p) => fs.existsSync(p));
+    this.sendScriptPath = foundSend || sendCandidates[0];
   }
 
   /**
-   * Retrieves the currently playing media session information using WinRT.
+   * Retrieves all active media sessions information using WinRT.
    */
   async getCurrentMedia(): Promise<MediaInfo> {
     try {
-      if (!fs.existsSync(this.scriptPath)) {
+      if (!fs.existsSync(this.getScriptPath)) {
         return this.lastMediaInfo;
       }
 
-      const command = `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${this.scriptPath}"`;
+      const command = `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${this.getScriptPath}"`;
       const { stdout } = await execPromise(command, { timeout: 3500 });
 
       const trimmed = stdout.trim();
@@ -73,6 +86,8 @@ export class WindowsMediaController {
         album: parsed.album || '',
         playbackStatus: parsed.playbackStatus || 'Stopped',
         sourceAppId: parsed.sourceAppId || null,
+        sessions: Array.isArray(parsed.sessions) ? parsed.sessions : [],
+        activeSessionIndex: typeof parsed.activeSessionIndex === 'number' ? parsed.activeSessionIndex : 0,
         updatedAt: new Date().toISOString(),
       };
       return this.lastMediaInfo;
@@ -85,22 +100,15 @@ export class WindowsMediaController {
   }
 
   /**
-   * Dispatches a native media keyboard event (play/pause, next, prev, volume).
+   * Dispatches a targeted session media command (play_pause, next, prev, volume).
    */
-  async sendMediaCommand(action: 'play_pause' | 'next' | 'prev' | 'volume_up' | 'volume_down' | 'volume_mute'): Promise<boolean> {
-    const vkCode = MEDIA_KEYS[action];
-    if (!vkCode) {
-      console.warn(`[MediaController] Unknown media command: ${action}`);
-      return false;
-    }
-
-    const psCommand = `powershell -NoProfile -NonInteractive -Command "$c = Add-Type -MemberDefinition '[DllImport(\\"user32.dll\\")] public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);' -Name 'W' -Namespace 'M' -PassThru; [M.W]::keybd_event(${vkCode}, 0, 0, [UIntPtr]::Zero); [M.W]::keybd_event(${vkCode}, 0, 2, [UIntPtr]::Zero);"`;
-
+  async sendMediaCommand(action: string, sessionIndex: number = -1): Promise<boolean> {
     try {
-      await execPromise(psCommand, { timeout: 2000 });
+      const command = `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${this.sendScriptPath}" -Action "${action}" -SessionIndex ${sessionIndex}`;
+      await execPromise(command, { timeout: 3500 });
       return true;
     } catch (error) {
-      console.error(`[MediaController] Failed to send key event for ${action}:`, error);
+      console.error(`[MediaController] Failed to dispatch ${action} (session ${sessionIndex}):`, error);
       return false;
     }
   }

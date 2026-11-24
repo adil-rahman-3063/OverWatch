@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Play, 
   Pause, 
@@ -7,74 +7,209 @@ import {
   Volume2, 
   VolumeX, 
   Volume1, 
-  Disc 
+  Disc,
+  ChevronLeft,
+  ChevronRight,
+  Radio
 } from 'lucide-react';
-import { MediaState } from '../types.ts';
+import { MediaState, MediaSessionItem } from '../types.ts';
 
 interface MediaCardProps {
   media: MediaState;
-  onAction: (action: string) => void;
+  onAction: (action: string, sessionIndex?: number) => void;
 }
 
 export const MediaCard: React.FC<MediaCardProps> = ({ media, onAction }) => {
-  const isPlaying = media.playbackStatus === 'Playing';
+  const [selectedIdx, setSelectedIdx] = useState(0);
+  const touchStartXRef = useRef<number | null>(null);
+
+  // Derive sessions list: use media.sessions if available, or synthesize from primary
+  const sessionList: MediaSessionItem[] = 
+    media.sessions && media.sessions.length > 0
+      ? media.sessions
+      : media.title
+      ? [
+          {
+            index: 0,
+            title: media.title,
+            artist: media.artist,
+            album: media.album || '',
+            playbackStatus: media.playbackStatus === 'Playing' ? 'Playing' : 'Paused',
+            sourceAppId: media.sourceAppId || 'Windows Media',
+          },
+        ]
+      : [];
+
+  const totalSessions = sessionList.length;
+
+  // Keep selected index within bounds if sessions change
+  useEffect(() => {
+    if (selectedIdx >= totalSessions && totalSessions > 0) {
+      setSelectedIdx(0);
+    }
+  }, [totalSessions, selectedIdx]);
+
+  const currentSession = sessionList[selectedIdx] || {
+    index: 0,
+    title: media.title || 'No active player',
+    artist: media.artist || 'Waiting for playback on Windows',
+    album: media.album || '',
+    playbackStatus: media.playbackStatus || 'Stopped',
+    sourceAppId: media.sourceAppId || 'Windows Media',
+  };
+
+  const isPlaying = currentSession.playbackStatus === 'Playing';
+
+  const handlePrevSession = () => {
+    if (totalSessions > 1) {
+      setSelectedIdx((prev) => (prev > 0 ? prev - 1 : totalSessions - 1));
+    }
+  };
+
+  const handleNextSession = () => {
+    if (totalSessions > 1) {
+      setSelectedIdx((prev) => (prev < totalSessions - 1 ? prev + 1 : 0));
+    }
+  };
+
+  // Horizontal touch swipe inside the card to switch between media sources
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartXRef.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartXRef.current === null) return;
+    const diff = e.changedTouches[0].clientX - touchStartXRef.current;
+    if (Math.abs(diff) > 40) {
+      if (diff > 0) {
+        handlePrevSession();
+      } else {
+        handleNextSession();
+      }
+    }
+    touchStartXRef.current = null;
+  };
 
   return (
-    <div className="deck-panel rounded-xl p-3 sm:p-4 h-full flex flex-col justify-between overflow-hidden">
+    <div 
+      className="deck-panel rounded-xl p-3 sm:p-4 h-full flex flex-col justify-between overflow-hidden relative select-none"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       <div>
-        {/* Header row */}
+        {/* Header row with Multi-Platform session carousel indicator */}
         <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#1e1e24]">
-          <span className="text-[11px] font-mono font-medium text-neutral-400">
-            Media transport
-          </span>
-          <div className="flex items-center gap-1.5 font-mono text-[10px]">
-            <span className={`w-1.5 h-1.5 rounded-full ${isPlaying ? 'bg-emerald-400' : 'bg-neutral-600'}`} />
-            <span className={isPlaying ? 'text-emerald-400' : 'text-neutral-500'}>
-              {media.playbackStatus || 'Idle'}
+          <div className="flex items-center gap-1.5">
+            <Radio className="w-3.5 h-3.5 text-neutral-400" />
+            <span className="text-[11px] font-mono font-medium text-neutral-300">
+              {currentSession.sourceAppId || 'Media Transport'}
             </span>
           </div>
+
+          {/* If multiple sessions, show pagination controls */}
+          {totalSessions > 1 ? (
+            <div className="flex items-center gap-1 font-mono text-[10px] bg-[#111116] px-2 py-0.5 rounded-full border border-neutral-800">
+              <button 
+                onClick={handlePrevSession}
+                className="hover:text-white text-neutral-400 p-0.5"
+                title="Previous media player"
+              >
+                <ChevronLeft className="w-3 h-3" />
+              </button>
+              <span className="text-amber-400 font-medium">
+                {selectedIdx + 1}/{totalSessions}
+              </span>
+              <button 
+                onClick={handleNextSession}
+                className="hover:text-white text-neutral-400 p-0.5"
+                title="Next media player"
+              >
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 font-mono text-[10px]">
+              <span className={`w-1.5 h-1.5 rounded-full ${isPlaying ? 'bg-emerald-400' : 'bg-neutral-600'}`} />
+              <span className={isPlaying ? 'text-emerald-400' : 'text-neutral-500'}>
+                {currentSession.playbackStatus || 'Idle'}
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* Track Metadata */}
-        <div className="flex items-center gap-3 p-2.5 rounded-lg bg-[#050507] border border-[#1a1a20]">
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 border ${
-            isPlaying 
-              ? 'bg-[#0e0e12] border-neutral-700 text-neutral-200' 
-              : 'bg-[#08080a] border-neutral-800 text-neutral-600'
-          }`}>
-            <Disc className="w-4 h-4 text-neutral-400" />
+        {/* Track Metadata (Swipeable area) */}
+        <div className="relative group">
+          <div className="flex items-center gap-3 p-2.5 rounded-lg bg-[#050507] border border-[#1a1a20] transition-all">
+            <div
+              className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 border transition-colors ${
+                isPlaying 
+                  ? 'bg-[#0e0e12] border-emerald-500/40 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.15)]' 
+                  : 'bg-[#08080a] border-neutral-800 text-neutral-600'
+              }`}
+            >
+              <Disc className={`w-4 h-4 ${isPlaying ? 'animate-spin' : ''}`} style={{ animationDuration: '4s' }} />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-1">
+                <h2 className="text-xs sm:text-sm font-medium text-white truncate tracking-tight">
+                  {currentSession.title || 'No media playing'}
+                </h2>
+                {totalSessions > 1 && (
+                  <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded border ${
+                    isPlaying 
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                      : 'bg-neutral-900 text-neutral-500 border-neutral-800'
+                  }`}>
+                    {currentSession.playbackStatus}
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-neutral-400 truncate mt-0.5">
+                {currentSession.artist || 'Waiting for playback on Windows'}
+              </p>
+            </div>
           </div>
 
-          <div className="min-w-0 flex-1">
-            <h2 className="text-xs sm:text-sm font-medium text-white truncate tracking-tight">
-              {media.title || 'No media playing'}
-            </h2>
-            <p className="text-[11px] text-neutral-400 truncate mt-0.5">
-              {media.artist || 'Waiting for playback on Windows'}
-            </p>
-          </div>
+          {/* Quick arrow hints for swipe when multiple sessions exist */}
+          {totalSessions > 1 && (
+            <div className="flex items-center justify-between px-1 mt-1 text-[9px] font-mono text-neutral-600">
+              <span>Swipe left/right to switch apps</span>
+              <div className="flex items-center gap-1">
+                {sessionList.map((_, i) => (
+                  <span
+                    key={i}
+                    onClick={() => setSelectedIdx(i)}
+                    className={`h-1 rounded-full transition-all cursor-pointer ${
+                      selectedIdx === i ? 'w-3 bg-amber-400' : 'w-1 bg-neutral-800'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       <div>
-        {/* Main Transport Buttons */}
+        {/* Main Transport Buttons (Target the selected session!) */}
         <div className="grid grid-cols-3 gap-2 mt-2">
           <button
-            onClick={() => onAction('prev')}
-            className="deck-button h-10 sm:h-11 rounded-lg flex items-center justify-center text-neutral-300 hover:text-white"
-            title="Previous track"
+            onClick={() => onAction('prev', currentSession.index)}
+            className="deck-button h-10 sm:h-11 rounded-lg flex items-center justify-center text-neutral-300 hover:text-white active:scale-95 transition-transform"
+            title={`Previous track on ${currentSession.sourceAppId || 'player'}`}
           >
             <SkipBack className="w-4 h-4 fill-current" />
           </button>
 
           <button
-            onClick={() => onAction('play_pause')}
-            className={`h-10 sm:h-11 rounded-lg flex items-center justify-center font-medium transition-colors border ${
+            onClick={() => onAction('play_pause', currentSession.index)}
+            className={`h-10 sm:h-11 rounded-lg flex items-center justify-center font-medium transition-all active:scale-95 border ${
               isPlaying
-                ? 'bg-white text-black border-white hover:bg-neutral-200'
+                ? 'bg-white text-black border-white hover:bg-neutral-200 shadow-md shadow-white/10'
                 : 'bg-[#111115] text-white border-neutral-700 hover:border-neutral-500'
             }`}
-            title="Play / Pause"
+            title={`Play / Pause ${currentSession.title || 'current session'}`}
           >
             {isPlaying ? (
               <Pause className="w-5 h-5 fill-current" />
@@ -84,27 +219,27 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, onAction }) => {
           </button>
 
           <button
-            onClick={() => onAction('next')}
-            className="deck-button h-10 sm:h-11 rounded-lg flex items-center justify-center text-neutral-300 hover:text-white"
-            title="Next track"
+            onClick={() => onAction('next', currentSession.index)}
+            className="deck-button h-10 sm:h-11 rounded-lg flex items-center justify-center text-neutral-300 hover:text-white active:scale-95 transition-transform"
+            title={`Next track on ${currentSession.sourceAppId || 'player'}`}
           >
             <SkipForward className="w-4 h-4 fill-current" />
           </button>
         </div>
 
-        {/* Volume Stepper */}
+        {/* Master Volume Stepper */}
         <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-[#1a1a20]">
           <button
             onClick={() => onAction('volume_mute')}
-            className="deck-button py-1.5 rounded-lg flex items-center justify-center gap-1 text-[11px] font-mono text-neutral-400 hover:text-neutral-200"
-            title="Mute"
+            className="deck-button py-1.5 rounded-lg flex items-center justify-center gap-1 text-[11px] font-mono text-neutral-400 hover:text-neutral-200 active:scale-95 transition-transform"
+            title="Mute PC master volume"
           >
             <VolumeX className="w-3 h-3" />
             <span>Mute</span>
           </button>
           <button
             onClick={() => onAction('volume_down')}
-            className="deck-button py-1.5 rounded-lg flex items-center justify-center gap-1 text-[11px] font-mono text-neutral-400 hover:text-neutral-200"
+            className="deck-button py-1.5 rounded-lg flex items-center justify-center gap-1 text-[11px] font-mono text-neutral-400 hover:text-neutral-200 active:scale-95 transition-transform"
             title="Volume down"
           >
             <Volume1 className="w-3 h-3" />
@@ -112,7 +247,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, onAction }) => {
           </button>
           <button
             onClick={() => onAction('volume_up')}
-            className="deck-button py-1.5 rounded-lg flex items-center justify-center gap-1 text-[11px] font-mono text-neutral-400 hover:text-neutral-200"
+            className="deck-button py-1.5 rounded-lg flex items-center justify-center gap-1 text-[11px] font-mono text-neutral-400 hover:text-neutral-200 active:scale-95 transition-transform"
             title="Volume up"
           >
             <Volume2 className="w-3 h-3" />
