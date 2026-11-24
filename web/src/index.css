@@ -68,3 +68,41 @@ html, body, #root {
 .animate-shake {
   animation: pin-shake 0.35s ease-in-out;
 }
+
+/* Split-Flap 3D Mechanical Flip Clock Animation */
+.perspective-800 {
+  perspective: 800px;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+@keyframes flap-fold-top {
+  0% {
+    transform: rotateX(0deg);
+  }
+  100% {
+    transform: rotateX(-90deg);
+  }
+}
+
+@keyframes flap-unfold-bottom {
+  0% {
+    transform: rotateX(90deg);
+  }
+  100% {
+    transform: rotateX(0deg);
+  }
+}
+
+.animate-flap-top {
+  animation: flap-fold-top 0.14s cubic-bezier(0.4, 0, 0.6, 1) forwards;
+  transform-origin: bottom center;
+}
+
+.animate-flap-bottom {
+  animation: flap-unfold-bottom 0.14s cubic-bezier(0.4, 0, 0.2, 1) 0.13s forwards;
+  transform-origin: top center;
+}
