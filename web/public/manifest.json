@@ -1,21 +1,22 @@
 {
   "short_name": "OverWatch",
-  "name": "OverWatch Remote Companion Deck",
+  "name": "OverWatch StandBy Deck",
   "icons": [
     {
-      "src": "/icon-192.png",
-      "type": "image/png",
-      "sizes": "192x192"
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
     },
     {
-      "src": "/icon-512.png",
-      "type": "image/png",
-      "sizes": "512x512"
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
     }
   ],
   "start_url": "/",
-  "background_color": "#06090e",
-  "theme_color": "#06090e",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "display": "standalone",
-  "orientation": "portrait"
+  "orientation": "landscape"
 }
