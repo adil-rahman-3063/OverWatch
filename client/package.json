@@ -1,0 +1,23 @@
+{
+  "name": "overwatch-client",
+  "version": "1.0.0",
+  "description": "Windows background daemon and hook handler for OverWatch",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "hook:agy": "node dist/hooks/antigravityHook.js",
+    "hook:claude": "node dist/hooks/claudeHook.js",
+    "setup:hooks": "tsx src/cli/setupHooks.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.5",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
+  }
+}
