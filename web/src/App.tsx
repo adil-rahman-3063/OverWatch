@@ -4,7 +4,7 @@ import { FlipClock } from './components/FlipClock.tsx';
 import { MediaCard } from './components/MediaCard.tsx';
 import { HardwareTelemetry } from './components/HardwareTelemetry.tsx';
 import { MacroDeck } from './components/MacroDeck.tsx';
-import { ApprovalDeck } from './components/ApprovalDeck.tsx';
+import { ClipboardBeam } from './components/ClipboardBeam.tsx';
 import { ApprovalOverlay } from './components/ApprovalOverlay.tsx';
 import { MediaState, PermissionRequest, QuotaData, SystemStats } from './types.ts';
 
@@ -45,6 +45,7 @@ export default function App() {
   const [stats, setStats] = useState<SystemStats | undefined>();
   const [requests, setRequests] = useState<PermissionRequest[]>([]);
   const [quota, setQuota] = useState<QuotaData>({});
+  const [pcClipboardText, setPcClipboardText] = useState<string>('');
 
   const channelRef = useRef<any>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -164,6 +165,12 @@ export default function App() {
       }
     });
 
+    channel.on('broadcast', { event: 'clipboard:state' }, ({ payload }) => {
+      if (typeof payload?.text === 'string') {
+        setPcClipboardText(payload.text);
+      }
+    });
+
     channel.on('broadcast', { event: 'permission:request' }, ({ payload }) => {
       if (payload?.id) {
         playAlertChime();
@@ -246,6 +253,26 @@ export default function App() {
         type: 'broadcast',
         event: 'macro:action',
         payload: { action },
+      });
+    }
+  };
+
+  const handleBeamText = async (text: string) => {
+    if (channelRef.current) {
+      await channelRef.current.send({
+        type: 'broadcast',
+        event: 'clipboard:set',
+        payload: { text },
+      });
+    }
+  };
+
+  const handleFetchClipboard = async () => {
+    if (channelRef.current) {
+      await channelRef.current.send({
+        type: 'broadcast',
+        event: 'clipboard:get',
+        payload: {},
       });
     }
   };
@@ -339,7 +366,7 @@ export default function App() {
         </div>
 
         {/* ========================================================================= */}
-        {/* SCREEN 3 (2 Cards Half & Half): Quick Macros (50%) + Command Gate (50%)   */}
+        {/* SCREEN 3 (2 Cards Half & Half): Quick Macros (50%) + Clipboard Beam (50%) */}
         {/* ========================================================================= */}
         <div className="w-screen h-full shrink-0 snap-center p-3 sm:p-5 flex items-center justify-center">
           <div className="w-full max-w-6xl h-full grid grid-cols-1 md:grid-cols-2 landscape:grid-cols-2 gap-3 sm:gap-4 items-stretch">
@@ -348,9 +375,13 @@ export default function App() {
               <MacroDeck onMacro={handleMacroAction} />
             </div>
 
-            {/* Right Card: Agent Command Gate (50%) */}
+            {/* Right Card: Universal Clipboard Beam (50%) */}
             <div className="h-full">
-              <ApprovalDeck requests={requests} onDecision={handleDecision} />
+              <ClipboardBeam
+                onBeamText={handleBeamText}
+                onFetchClipboard={handleFetchClipboard}
+                pcClipboardText={pcClipboardText}
+              />
             </div>
           </div>
         </div>

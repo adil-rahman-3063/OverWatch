@@ -3,6 +3,7 @@ import { config } from './config.js';
 import { mediaController, MediaInfo } from './media/windowsMedia.js';
 import { AntigravityQuotaData } from './quota/antigravityQuota.js';
 import { SystemStats, executeMacro } from './system/pcStats.js';
+import { setWindowsClipboard, getWindowsClipboard } from './system/clipboard.js';
 
 export interface PendingRequest {
   id: string;
@@ -39,9 +40,8 @@ export class SupabaseService {
       },
     });
 
-    // 1. Listen for remote media actions
+    // 1. Media Actions
     this.channel.on('broadcast', { event: 'media:action' }, async ({ payload }) => {
-      console.log(`[Supabase] Received media action:`, payload);
       const action = payload?.action;
       if (action) {
         await mediaController.sendMediaCommand(action);
@@ -52,22 +52,47 @@ export class SupabaseService {
       }
     });
 
-    // 2. Listen for Quick Macro actions
+    // 2. Macro Actions
     this.channel.on('broadcast', { event: 'macro:action' }, async ({ payload }) => {
-      console.log(`[Supabase] Received macro action:`, payload);
       const action = payload?.action;
       if (action) {
         await executeMacro(action, payload?.workspaceDir);
       }
     });
 
-    // 3. Listen for remote permission decisions
+    // 3. Clipboard Beam: Set PC Clipboard from Phone
+    this.channel.on('broadcast', { event: 'clipboard:set' }, async ({ payload }) => {
+      const text = payload?.text;
+      if (typeof text === 'string') {
+        const success = await setWindowsClipboard(text);
+        if (success && this.channel) {
+          await this.channel.send({
+            type: 'broadcast',
+            event: 'clipboard:synced',
+            payload: { text, success: true, timestamp: new Date().toISOString() },
+          });
+        }
+      }
+    });
+
+    // 4. Clipboard Beam: Fetch PC Clipboard to Phone
+    this.channel.on('broadcast', { event: 'clipboard:get' }, async () => {
+      const text = await getWindowsClipboard();
+      if (this.channel) {
+        await this.channel.send({
+          type: 'broadcast',
+          event: 'clipboard:state',
+          payload: { text, timestamp: new Date().toISOString() },
+        });
+      }
+    });
+
+    // 5. Permission Decisions
     this.channel.on('broadcast', { event: 'permission:decision' }, async ({ payload }) => {
-      console.log(`[Supabase] Received permission decision via broadcast:`, payload);
       this.resolveDecision(payload?.requestId, payload?.decision);
     });
 
-    // 4. Database changes fallback for permission_requests
+    // 6. DB changes fallback for permission_requests
     this.client
       .channel('db-permission-changes')
       .on(
@@ -99,7 +124,7 @@ export class SupabaseService {
       clearTimeout(pending.timer);
       this.pendingRequests.delete(requestId);
       pending.resolve(decision);
-      console.log(`[Supabase] Successfully resolved request ${requestId} with decision: ${decision}`);
+      console.log(`[Supabase] Resolved request [${requestId}] with decision: ${decision}`);
     }
   }
 
