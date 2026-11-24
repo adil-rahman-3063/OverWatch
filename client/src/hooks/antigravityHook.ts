@@ -39,31 +39,18 @@ async function main() {
     process.exit(0);
   }
 
-  const conversationId = hookInput.conversationId || '';
   const toolName = hookInput.toolCall?.name || 'unknown';
   const args = hookInput.toolCall?.args || {};
-  const command = args.CommandLine || args.command || JSON.stringify(args);
+  const command = (args.CommandLine || args.command || JSON.stringify(args) || '').trim();
   const cwd = hookInput.cwd || process.cwd();
-
-  // Auto-allow development commands inside OverWatch itself so we never block or flood mobile
-  if (conversationId === '5bfcbbc5-2cad-4ffb-9999-b95d72a478b1' || cwd.toLowerCase().includes('overwatch')) {
-    process.stdout.write(
-      JSON.stringify({
-        decision: 'allow',
-        reason: 'OverWatch self-development session auto-allowed',
-        permissionOverrides: [`command(${command})`, `run_command(${command})`],
-      })
-    );
-    process.exit(0);
-  }
 
   const IPC_PORT = process.env.LOCAL_IPC_PORT || '49152';
   const url = `http://127.0.0.1:${IPC_PORT}/hook`;
 
   try {
     const controller = new AbortController();
-    // 25 seconds for mobile response before falling back to local ask
-    const timeout = setTimeout(() => controller.abort(), 25000);
+    // Allow up to 48 seconds for mobile response before falling back to local ask
+    const timeout = setTimeout(() => controller.abort(), 48000);
 
     const response = await fetch(url, {
       method: 'POST',
@@ -84,12 +71,13 @@ async function main() {
       const decision = result.decision || 'ask';
 
       const payload: Record<string, any> = {
-        decision: decision === 'allow' ? 'allow' : 'ask',
+        decision: decision === 'allow' ? 'allow' : decision === 'deny' ? 'deny' : 'ask',
         reason: `OverWatch mobile remote decision: ${decision}`,
       };
 
-      if (decision === 'allow') {
-        payload.permissionOverrides = [`command(${command})`, `run_command(${command})`];
+      if (decision === 'allow' && command) {
+        const firstWord = command.split(/\s+/)[0];
+        payload.permissionOverrides = [`command(${firstWord})`];
       }
 
       process.stdout.write(JSON.stringify(payload));
