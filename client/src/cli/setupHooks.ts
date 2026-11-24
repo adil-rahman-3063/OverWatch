@@ -4,8 +4,10 @@ import os from 'os';
 
 const isRemove = process.argv.includes('--remove') || process.argv.includes('-r');
 
-const HOOK_SCRIPT_PATH = path.resolve(__dirname, '../hooks/antigravityHook.js');
-const CLAUDE_HOOK_PATH = path.resolve(__dirname, '../hooks/claudeHook.js');
+// Locate compiled dist hook scripts
+const clientRoot = path.resolve(__dirname, __dirname.includes('dist') ? '../..' : '../..');
+const HOOK_SCRIPT_PATH = path.join(clientRoot, 'dist', 'hooks', 'antigravityHook.js');
+const CLAUDE_HOOK_PATH = path.join(clientRoot, 'dist', 'hooks', 'claudeHook.js');
 
 async function setupAntigravityHooks() {
   const configDir = path.join(os.homedir(), '.gemini', 'config');

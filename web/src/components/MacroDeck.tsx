@@ -15,51 +15,26 @@ export const MacroDeck: React.FC<MacroDeckProps> = ({ onMacro }) => {
   };
 
   const macros = [
-    {
-      id: 'lock_pc',
-      label: 'Lock workstation',
-      desc: 'Lock Windows PC immediately',
-      icon: Lock,
-    },
-    {
-      id: 'turn_off_screens',
-      label: 'Sleep displays',
-      desc: 'Put monitors to sleep',
-      icon: Moon,
-    },
-    {
-      id: 'volume_mute',
-      label: 'Mute master audio',
-      desc: 'Toggle system volume mute',
-      icon: VolumeX,
-    },
-    {
-      id: 'open_terminal',
-      label: 'Launch terminal',
-      desc: 'Open PowerShell in workspace',
-      icon: Terminal,
-    },
-    {
-      id: 'open_ide',
-      label: 'Launch editor',
-      desc: 'Open Antigravity IDE / VS Code',
-      icon: Code2,
-    },
+    { id: 'lock_pc', label: 'Lock PC', icon: Lock },
+    { id: 'turn_off_screens', label: 'Sleep screens', icon: Moon },
+    { id: 'volume_mute', label: 'Mute master', icon: VolumeX },
+    { id: 'open_terminal', label: 'Terminal', icon: Terminal },
+    { id: 'open_ide', label: 'Editor', icon: Code2 },
   ];
 
   return (
-    <div className="deck-panel rounded-xl p-5 flex flex-col justify-between h-full">
+    <div className="deck-panel rounded-xl p-3 sm:p-4 h-full flex flex-col justify-between overflow-hidden">
       <div>
-        <div className="pb-3 mb-4 border-b border-[#1e1e24] flex items-center justify-between">
-          <span className="text-xs font-mono font-medium text-neutral-300 uppercase tracking-wider">
-            Quick action macros
+        <div className="pb-2 mb-2 border-b border-[#1e1e24] flex items-center justify-between">
+          <span className="text-[11px] font-mono font-medium text-neutral-300 uppercase tracking-wider">
+            Quick macros
           </span>
-          <span className="text-[10px] font-mono text-neutral-500">
-            One-tap triggers
+          <span className="text-[9px] font-mono text-neutral-500">
+            One-tap
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+        <div className="grid grid-cols-2 gap-2">
           {macros.map((m) => {
             const isJustExecuted = lastExecuted === m.id;
             const Icon = m.icon;
@@ -68,35 +43,28 @@ export const MacroDeck: React.FC<MacroDeckProps> = ({ onMacro }) => {
               <button
                 key={m.id}
                 onClick={() => handleTrigger(m.id)}
-                className={`deck-button p-3.5 rounded-lg text-left flex items-center justify-between group ${
+                className={`deck-button p-2.5 rounded-lg text-left flex items-center gap-2 group transition-all ${
                   isJustExecuted ? 'border-emerald-500/60 bg-[#141d18]' : ''
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-md flex items-center justify-center border transition-colors ${
-                    isJustExecuted 
-                      ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400' 
-                      : 'bg-[#121217] border-[#22222a] text-neutral-400 group-hover:text-white'
-                  }`}>
-                    {isJustExecuted ? <Check className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-mono font-medium text-white tracking-tight">
-                      {m.label}
-                    </h4>
-                    <p className="text-[10px] font-mono text-neutral-500">
-                      {m.desc}
-                    </p>
-                  </div>
+                <div className={`w-7 h-7 rounded-md flex items-center justify-center border transition-colors shrink-0 ${
+                  isJustExecuted 
+                    ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400' 
+                    : 'bg-[#121217] border-[#22222a] text-neutral-400 group-hover:text-white'
+                }`}>
+                  {isJustExecuted ? <Check className="w-3.5 h-3.5" /> : <Icon className="w-3.5 h-3.5" />}
                 </div>
+                <h4 className="text-[11px] font-mono font-medium text-white truncate">
+                  {m.label}
+                </h4>
               </button>
             );
           })}
         </div>
       </div>
 
-      <div className="pt-3 border-t border-[#1e1e24] text-[10px] font-mono text-neutral-500 text-center">
-        Commands run natively on your Windows PC
+      <div className="pt-2 border-t border-[#1e1e24] text-[9px] font-mono text-neutral-500 text-center">
+        Native Windows trigger
       </div>
     </div>
   );
