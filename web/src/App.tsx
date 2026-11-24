@@ -6,6 +6,8 @@ import { HardwareTelemetry } from './components/HardwareTelemetry.tsx';
 import { MacroDeck } from './components/MacroDeck.tsx';
 import { ClipboardBeam } from './components/ClipboardBeam.tsx';
 import { ApprovalOverlay } from './components/ApprovalOverlay.tsx';
+import { PinLock } from './components/PinLock.tsx';
+import { Lock } from 'lucide-react';
 import { MediaState, PermissionRequest, QuotaData, SystemStats } from './types.ts';
 
 // 1-pixel silent base64 MP4 video for iOS/Android keep-awake fallback
@@ -37,7 +39,15 @@ function playAlertChime() {
   } catch {}
 }
 
+const EXPECTED_PIN = import.meta.env.VITE_ACCESS_PIN || '123456';
+
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    return (
+      localStorage.getItem('overwatch_auth_token') === 'true' ||
+      sessionStorage.getItem('overwatch_auth_token') === 'true'
+    );
+  });
   const [connected, setConnected] = useState(false);
   const [activePageIndex, setActivePageIndex] = useState(0);
   const [media, setMedia] = useState<MediaState>({
@@ -354,6 +364,15 @@ export default function App() {
     }
   };
 
+  if (!isAuthenticated) {
+    return (
+      <PinLock
+        expectedPin={EXPECTED_PIN}
+        onAuthenticated={() => setIsAuthenticated(true)}
+      />
+    );
+  }
+
   return (
     <div className="h-screen w-screen bg-black text-[#f4f4f5] flex flex-col overflow-hidden relative font-sans antialiased select-none">
       {/* Invisible silent keep-awake video tag for mobile browsers */}
@@ -376,11 +395,25 @@ export default function App() {
         <span className="text-[11px] font-mono text-neutral-500 font-medium tracking-wider">
           STANDBY • {deviceId}
         </span>
-        <div className="flex items-center gap-1.5 font-mono text-[11px] tabular-nums">
-          <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-emerald-400' : 'bg-neutral-600'}`} />
-          <span className={connected ? 'text-neutral-300' : 'text-neutral-500'}>
-            {connected ? 'Live' : 'Offline'}
-          </span>
+        <div className="flex items-center gap-3 font-mono text-[11px] tabular-nums">
+          <div className="flex items-center gap-1.5">
+            <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-emerald-400' : 'bg-neutral-600'}`} />
+            <span className={connected ? 'text-neutral-300' : 'text-neutral-500'}>
+              {connected ? 'Live' : 'Offline'}
+            </span>
+          </div>
+
+          <button
+            onClick={() => {
+              localStorage.removeItem('overwatch_auth_token');
+              sessionStorage.removeItem('overwatch_auth_token');
+              setIsAuthenticated(false);
+            }}
+            className="text-neutral-600 hover:text-neutral-400 p-0.5 transition-colors"
+            title="Lock device"
+          >
+            <Lock className="w-3 h-3" />
+          </button>
         </div>
       </div>
 
