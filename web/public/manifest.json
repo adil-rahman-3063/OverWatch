@@ -1,0 +1,21 @@
+{
+  "short_name": "OverWatch",
+  "name": "OverWatch Remote Companion Deck",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#06090e",
+  "theme_color": "#06090e",
+  "display": "standalone",
+  "orientation": "portrait"
+}
