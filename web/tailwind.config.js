@@ -6,13 +6,17 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Geist', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
+        mono: ['"Geist Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+      },
       colors: {
         deck: {
-          950: '#06090e',
-          900: '#0b111a',
-          850: '#101926',
-          800: '#162233',
-          700: '#23364f',
+          pitch: '#000000',
+          surface: '#09090b',
+          elevated: '#121215',
+          border: '#1e1e24',
+          subtle: '#272730',
         },
       },
     },

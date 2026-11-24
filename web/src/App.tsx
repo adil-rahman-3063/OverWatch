@@ -1,12 +1,12 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase, deviceId } from './supabase.ts';
-import { Header } from './components/Header.tsx';
+import { FlipClock } from './components/FlipClock.tsx';
 import { MediaCard } from './components/MediaCard.tsx';
-import { ApprovalDeck } from './components/ApprovalDeck.tsx';
-import { QuotaCard } from './components/QuotaCard.tsx';
-import { MediaState, PermissionRequest, QuotaData } from './types.ts';
+import { HardwareTelemetry } from './components/HardwareTelemetry.tsx';
+import { MacroDeck } from './components/MacroDeck.tsx';
+import { ApprovalOverlay } from './components/ApprovalOverlay.tsx';
+import { MediaState, PermissionRequest, QuotaData, SystemStats } from './types.ts';
 
-// Web Audio API chime generator for incoming permission alerts
 function playAlertChime() {
   try {
     const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -14,10 +14,10 @@ function playAlertChime() {
     const gain = audioCtx.createGain();
 
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
-    osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15); // A5
+    osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15);
 
-    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
 
     osc.connect(gain);
@@ -34,22 +34,51 @@ function playAlertChime() {
 
 export default function App() {
   const [connected, setConnected] = useState(false);
+  const [activePageIndex, setActivePageIndex] = useState(0);
   const [media, setMedia] = useState<MediaState>({
     title: '',
     artist: '',
     album: '',
     playbackStatus: 'Stopped',
   });
+  const [stats, setStats] = useState<SystemStats | undefined>();
   const [requests, setRequests] = useState<PermissionRequest[]>([]);
   const [quota, setQuota] = useState<QuotaData>({});
 
   const channelRef = useRef<any>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // 1. Apple StandBy Mode: Enable Screen Wake Lock API
   useEffect(() => {
-    // 1. Initial data fetch from Supabase tables
+    let wakeLock: any = null;
+    async function requestWakeLock() {
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLock = await (navigator as any).wakeLock.request('screen');
+        }
+      } catch {}
+    }
+    requestWakeLock();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        requestWakeLock();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (wakeLock) {
+        wakeLock.release().catch(() => {});
+      }
+    };
+  }, []);
+
+  // 2. Supabase Realtime Setup
+  useEffect(() => {
     async function loadInitialData() {
       try {
-        // Load latest media
         const { data: mediaData } = await supabase
           .from('media_state')
           .select('*')
@@ -65,7 +94,6 @@ export default function App() {
           });
         }
 
-        // Load latest quota
         const { data: quotaData } = await supabase
           .from('quota_snapshots')
           .select('*')
@@ -75,7 +103,6 @@ export default function App() {
           setQuota({ antigravity: quotaData.antigravity });
         }
 
-        // Load pending permission requests
         const { data: reqData } = await supabase
           .from('permission_requests')
           .select('*')
@@ -103,7 +130,6 @@ export default function App() {
 
     loadInitialData();
 
-    // 2. Setup Supabase Realtime Channel
     const channelName = `overwatch:${deviceId}`;
     const channel = supabase.channel(channelName, {
       config: {
@@ -113,7 +139,6 @@ export default function App() {
 
     channelRef.current = channel;
 
-    // Listen for live media state
     channel.on('broadcast', { event: 'media:state' }, ({ payload }) => {
       if (payload) {
         setMedia({
@@ -126,14 +151,18 @@ export default function App() {
       }
     });
 
-    // Listen for live quota updates
+    channel.on('broadcast', { event: 'telemetry:state' }, ({ payload }) => {
+      if (payload?.stats) {
+        setStats(payload.stats);
+      }
+    });
+
     channel.on('broadcast', { event: 'quota:state' }, ({ payload }) => {
       if (payload?.antigravity) {
         setQuota({ antigravity: payload.antigravity });
       }
     });
 
-    // Listen for incoming permission requests
     channel.on('broadcast', { event: 'permission:request' }, ({ payload }) => {
       if (payload?.id) {
         playAlertChime();
@@ -152,7 +181,6 @@ export default function App() {
       }
     });
 
-    // Listen for permission decisions
     channel.on('broadcast', { event: 'permission:decision' }, ({ payload }) => {
       if (payload?.requestId) {
         setRequests((prev) =>
@@ -165,7 +193,6 @@ export default function App() {
       }
     });
 
-    // Database changes fallback
     const dbSub = supabase
       .channel('web-db-changes')
       .on(
@@ -202,7 +229,6 @@ export default function App() {
     };
   }, []);
 
-  // Send media action (play/pause, next, prev, volume)
   const handleMediaAction = async (action: string) => {
     if (channelRef.current) {
       await channelRef.current.send({
@@ -213,14 +239,21 @@ export default function App() {
     }
   };
 
-  // Allow or Deny command execution
+  const handleMacroAction = async (action: string) => {
+    if (channelRef.current) {
+      await channelRef.current.send({
+        type: 'broadcast',
+        event: 'macro:action',
+        payload: { action },
+      });
+    }
+  };
+
   const handleDecision = async (requestId: string, decision: 'allow' | 'deny') => {
-    // 1. Optimistically update local UI
     setRequests((prev) =>
       prev.map((r) => (r.id === requestId ? { ...r, status: decision === 'allow' ? 'allowed' : 'denied' } : r))
     );
 
-    // 2. Broadcast instant decision to Windows client
     if (channelRef.current) {
       await channelRef.current.send({
         type: 'broadcast',
@@ -229,31 +262,100 @@ export default function App() {
       });
     }
 
-    // 3. Update Supabase DB table
     try {
       await supabase
         .from('permission_requests')
         .update({ status: decision === 'allow' ? 'allowed' : 'denied' })
         .eq('id', requestId);
-    } catch (err) {
-      console.warn('Error updating request status:', err);
+    } catch {}
+  };
+
+  // Track scroll position to update pagination dots
+  const handleScroll = () => {
+    if (scrollContainerRef.current) {
+      const { scrollLeft, clientWidth } = scrollContainerRef.current;
+      const index = Math.round(scrollLeft / clientWidth);
+      setActivePageIndex(index);
+    }
+  };
+
+  const scrollToPage = (index: number) => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({
+        left: index * scrollContainerRef.current.clientWidth,
+        behavior: 'smooth',
+      });
     }
   };
 
   return (
-    <div className="min-h-screen bg-deck-950 text-slate-100 flex flex-col max-w-md mx-auto relative pb-8">
-      <Header connected={connected} deviceId={deviceId} />
+    <div className="h-screen w-screen bg-black text-[#f4f4f5] flex flex-col overflow-hidden relative font-sans antialiased select-none">
+      {/* Floating Permission Interlock Modal */}
+      <ApprovalOverlay requests={requests} onDecision={handleDecision} />
 
-      <main className="flex-1 px-4 py-4 space-y-4">
-        {/* 1. Command Approval Deck */}
-        <ApprovalDeck requests={requests} onDecision={handleDecision} />
+      {/* Top minimal status bar */}
+      <div className="flex items-center justify-between px-5 py-2.5 bg-black z-30 shrink-0">
+        <span className="text-[11px] font-mono text-neutral-500 font-medium tracking-wider">
+          OVERWATCH STANDBY • {deviceId}
+        </span>
+        <div className="flex items-center gap-1.5 font-mono text-[11px] tabular-nums">
+          <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-emerald-400' : 'bg-neutral-600'}`} />
+          <span className={connected ? 'text-neutral-300' : 'text-neutral-500'}>
+            {connected ? 'Live' : 'Offline'}
+          </span>
+        </div>
+      </div>
 
-        {/* 2. Windows Media Controller */}
-        <MediaCard media={media} onAction={handleMediaAction} />
+      {/* Apple StandBy-style Horizontal Paginated Swipe Carousel */}
+      <main
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 flex overflow-x-auto snap-x snap-mandatory no-scrollbar h-full w-full"
+      >
+        {/* Page 1: Retro Black & White Flip Clock & Sprint Timer */}
+        <div className="w-screen h-full shrink-0 snap-center p-3 sm:p-6 flex items-center justify-center">
+          <div className="w-full max-w-4xl h-full">
+            <FlipClock />
+          </div>
+        </div>
 
-        {/* 3. Antigravity Quota & Limits */}
-        <QuotaCard quota={quota} />
+        {/* Page 2: Full-screen Media Transport Controller */}
+        <div className="w-screen h-full shrink-0 snap-center p-3 sm:p-6 flex items-center justify-center">
+          <div className="w-full max-w-xl h-full">
+            <MediaCard media={media} onAction={handleMediaAction} />
+          </div>
+        </div>
+
+        {/* Page 3: Windows Hardware Telemetry & Model Limits */}
+        <div className="w-screen h-full shrink-0 snap-center p-3 sm:p-6 flex items-center justify-center">
+          <div className="w-full max-w-2xl h-full">
+            <HardwareTelemetry stats={stats} quota={quota} />
+          </div>
+        </div>
+
+        {/* Page 4: One-Tap Macro Actions Deck */}
+        <div className="w-screen h-full shrink-0 snap-center p-3 sm:p-6 flex items-center justify-center">
+          <div className="w-full max-w-2xl h-full">
+            <MacroDeck onMacro={handleMacroAction} />
+          </div>
+        </div>
       </main>
+
+      {/* Minimal StandBy Pagination Dots */}
+      <div className="flex items-center justify-center gap-2 py-3 bg-black z-30 shrink-0">
+        {[0, 1, 2, 3].map((page) => (
+          <button
+            key={page}
+            onClick={() => scrollToPage(page)}
+            className={`h-1.5 rounded-full transition-all duration-200 ${
+              activePageIndex === page
+                ? 'w-6 bg-white'
+                : 'w-1.5 bg-[#26262e] hover:bg-[#383844]'
+            }`}
+            title={`Page ${page + 1}`}
+          />
+        ))}
+      </div>
     </div>
   );
 }

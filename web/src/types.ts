@@ -38,3 +38,12 @@ export interface QuotaData {
     fetchedAt: string;
   };
 }
+
+export interface SystemStats {
+  cpuUsagePercent: number;
+  totalRamGb: number;
+  usedRamGb: number;
+  ramUsagePercent: number;
+  uptimeHours: number;
+  hostname: string;
+}

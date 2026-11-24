@@ -3,6 +3,7 @@ import { mediaController } from './media/windowsMedia.js';
 import { quotaCollector } from './quota/antigravityQuota.js';
 import { supabaseService } from './supabase.js';
 import { localServer } from './ipc/localServer.js';
+import { getSystemStats } from './system/pcStats.js';
 
 async function bootstrap() {
   console.log(`
@@ -17,21 +18,15 @@ async function bootstrap() {
   ======================================================
   `);
 
-  console.log(`[Config] Device ID: ${config.deviceId}`);
-  console.log(`[Config] Supabase URL: ${config.supabaseUrl}`);
-  console.log(`[Config] Local IPC Port: ${config.localIpcPort}`);
-
-  // 1. Start Local IPC HTTP Server
   await localServer.start();
 
-  // 2. Initialize Supabase Realtime Service
   if (!config.supabaseUrl || !config.supabaseAnonKey) {
-    console.error('[Error] SUPABASE_URL or SUPABASE_ANON_KEY is missing in .env!');
+    console.error('[Error] SUPABASE_URL or SUPABASE_ANON_KEY is missing in .env');
     process.exit(1);
   }
   await supabaseService.init();
 
-  // 3. Media Poller Loop (detect track changes)
+  // 1. Media Poller
   let lastTrackSignature = '';
   async function pollMedia() {
     try {
@@ -39,33 +34,33 @@ async function bootstrap() {
       const signature = `${media.title}-${media.artist}-${media.playbackStatus}`;
       if (signature !== lastTrackSignature) {
         lastTrackSignature = signature;
-        console.log(`[Media] Track change detected: "${media.title}" by ${media.artist} [${media.playbackStatus}]`);
+        console.log(`[Media] Track update: "${media.title}" by ${media.artist} [${media.playbackStatus}]`);
         await supabaseService.publishMediaState(media);
       }
-    } catch (err: any) {
-      console.warn('[Media] Polling error:', err.message);
-    }
+    } catch {}
   }
-
-  // Initial media poll & schedule interval
   await pollMedia();
   setInterval(pollMedia, config.mediaPollIntervalMs);
 
-  // 4. Quota Poller Loop
+  // 2. Hardware Telemetry Poller (every 5 seconds)
+  async function pollTelemetry() {
+    try {
+      const stats = await getSystemStats();
+      await supabaseService.publishSystemStats(stats);
+    } catch {}
+  }
+  await pollTelemetry();
+  setInterval(pollTelemetry, 5000);
+
+  // 3. Quota Poller
   async function pollQuota() {
     try {
-      console.log('[Quota] Refreshing Antigravity quota...');
       const usage = await quotaCollector.getUsage();
       if (usage) {
-        console.log(`[Quota] Fetched ${usage.groups.length} quota groups successfully.`);
         await supabaseService.publishQuotaState(usage);
       }
-    } catch (err: any) {
-      console.warn('[Quota] Polling error:', err.message);
-    }
+    } catch {}
   }
-
-  // Initial quota poll & schedule interval
   await pollQuota();
   setInterval(pollQuota, config.quotaPollIntervalMs);
 
