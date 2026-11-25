@@ -4,6 +4,7 @@ import { quotaCollector } from './quota/antigravityQuota.js';
 import { supabaseService } from './supabase.js';
 import { localServer } from './ipc/localServer.js';
 import { getSystemStats } from './system/pcStats.js';
+import { agentSessionMonitor } from './session/agentSession.js';
 
 async function bootstrap() {
   console.log(`
@@ -63,6 +64,16 @@ async function bootstrap() {
   }
   await pollQuota();
   setInterval(pollQuota, config.quotaPollIntervalMs);
+
+  // 4. Antigravity Agent Session Poller (every 3 seconds)
+  async function pollAgentSession() {
+    try {
+      const session = await agentSessionMonitor.getSessionState();
+      await supabaseService.publishSessionState(session);
+    } catch {}
+  }
+  await pollAgentSession();
+  setInterval(pollAgentSession, 3000);
 
   console.log('\n[OverWatch] Daemon is actively running. Press Ctrl+C to terminate.\n');
 }

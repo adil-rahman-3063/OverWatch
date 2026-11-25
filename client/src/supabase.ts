@@ -1,8 +1,11 @@
 import { createClient, SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
+import { exec } from 'child_process';
+import util from 'util';
 import { config } from './config.js';
 import { mediaController, MediaInfo } from './media/windowsMedia.js';
 import { AntigravityQuotaData } from './quota/antigravityQuota.js';
 import { SystemStats, executeMacro } from './system/pcStats.js';
+import { AgentSessionState, agentSessionMonitor } from './session/agentSession.js';
 import { setWindowsClipboard, getWindowsClipboard } from './system/clipboard.js';
 
 export interface PendingRequest {
@@ -94,7 +97,85 @@ export class SupabaseService {
       this.resolveDecision(payload?.requestId, payload?.decision);
     });
 
-    // 6. DB changes fallback for permission_requests
+    // 6. Beaming Quick Prompts from Mobile into Antigravity
+    this.channel.on('broadcast', { event: 'agent:prompt' }, async ({ payload }) => {
+      const text = payload?.prompt;
+      if (typeof text === 'string' && text.trim().length > 0) {
+        console.log(`[AgentPrompt] Received mobile prompt: "${text.slice(0, 60)}"`);
+        await setWindowsClipboard(text);
+
+        if (payload?.autoSend) {
+          try {
+            const execPromise = util.promisify(exec);
+            const psScript = `
+              $wshell = New-Object -ComObject wscript.shell;
+              $activated = $wshell.AppActivate('Antigravity');
+              if (-not $activated) { $wshell.AppActivate('Visual Studio Code'); }
+              Start-Sleep -Milliseconds 120;
+              $wshell.SendKeys('^v');
+              Start-Sleep -Milliseconds 60;
+              $wshell.SendKeys('{ENTER}');
+            `;
+            const base64 = Buffer.from(psScript, 'utf-8').toString('base64');
+            await execPromise(`powershell -NoProfile -NonInteractive -EncodedCommand ${base64}`);
+            console.log(`[AgentPrompt] Successfully pasted and submitted prompt to active editor.`);
+          } catch (err: any) {
+            console.warn('[AgentPrompt] SendKeys automated entry failed:', err.message);
+          }
+        }
+      }
+    });
+
+    // 7. Remote Host Git Push (Executes on Windows Host PC outside the Sandbox)
+    this.channel.on('broadcast', { event: 'agent:git_push' }, async ({ payload }) => {
+      const workspace = payload?.workspace || process.cwd();
+      const customCmd = payload?.command;
+      const message = payload?.commitMessage || 'feat: updates from OverWatch mobile deck';
+      console.log(`[GitPush] Received remote push trigger for: ${workspace}`);
+
+      try {
+        const execPromise = util.promisify(exec);
+        let psCmd: string;
+        if (customCmd && typeof customCmd === 'string') {
+          psCmd = `powershell -NoProfile -Command "${customCmd.replace(/"/g, '`"')}"`;
+        } else {
+          const cleanMsg = message.replace(/["`$]/g, '');
+          psCmd = `powershell -NoProfile -Command "git add -A; git commit -m '${cleanMsg}'; git push origin main"`;
+        }
+        console.log(`[GitPush] Executing: ${psCmd}`);
+        const { stdout, stderr } = await execPromise(psCmd, { cwd: workspace, timeout: 45000 });
+        console.log('[GitPush] Success:\n', stdout);
+
+        if (this.channel) {
+          await this.channel.send({
+            type: 'broadcast',
+            event: 'git:push_status',
+            payload: {
+              success: true,
+              message: 'Successfully committed & pushed to GitHub main branch!',
+              output: stdout || stderr,
+              timestamp: new Date().toISOString(),
+            },
+          });
+        }
+      } catch (err: any) {
+        console.error('[GitPush] Push failed:', err.message);
+        if (this.channel) {
+          await this.channel.send({
+            type: 'broadcast',
+            event: 'git:push_status',
+            payload: {
+              success: false,
+              message: err.message,
+              output: err.stdout || err.stderr || err.message,
+              timestamp: new Date().toISOString(),
+            },
+          });
+        }
+      }
+    });
+
+    // 8. DB changes fallback for permission_requests
     this.client
       .channel('db-permission-changes')
       .on(
@@ -133,6 +214,7 @@ export class SupabaseService {
       this.pendingRequests.delete(requestId);
       // Strict fail-closed: Only explicit 'allow' approves. Any denial or skip denies.
       const hookDecision = decision === 'allow' ? 'allow' : 'deny';
+      agentSessionMonitor.recordHookDecision(hookDecision);
       pending.resolve(hookDecision);
       console.log(`[Supabase] Resolved request [${requestId}] with decision: ${hookDecision}`);
     }
@@ -193,6 +275,22 @@ export class SupabaseService {
           payload: {
             deviceId: config.deviceId,
             stats,
+            updatedAt: new Date().toISOString(),
+          },
+        });
+      }
+    } catch {}
+  }
+
+  async publishSessionState(session: AgentSessionState): Promise<void> {
+    try {
+      if (this.channel) {
+        await this.channel.send({
+          type: 'broadcast',
+          event: 'session:state',
+          payload: {
+            deviceId: config.deviceId,
+            session,
             updatedAt: new Date().toISOString(),
           },
         });

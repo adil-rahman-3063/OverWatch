@@ -5,10 +5,12 @@ import { MediaCard } from './components/MediaCard.tsx';
 import { HardwareTelemetry } from './components/HardwareTelemetry.tsx';
 import { MacroDeck } from './components/MacroDeck.tsx';
 import { ClipboardBeam } from './components/ClipboardBeam.tsx';
+import { AgentSessionCard } from './components/AgentSessionCard.tsx';
+import { AgentPromptDeck } from './components/AgentPromptDeck.tsx';
 import { ApprovalOverlay } from './components/ApprovalOverlay.tsx';
 import { PinLock } from './components/PinLock.tsx';
 import { Lock } from 'lucide-react';
-import { MediaState, PermissionRequest, QuotaData, SystemStats } from './types.ts';
+import { AgentSessionState, MediaState, PermissionRequest, QuotaData, SystemStats } from './types.ts';
 import { playAlertRingtone } from './utils/sound.ts';
 
 // 1-pixel silent base64 MP4 video for iOS/Android keep-awake fallback
@@ -35,6 +37,8 @@ export default function App() {
     playbackStatus: 'Stopped',
   });
   const [stats, setStats] = useState<SystemStats | undefined>();
+  const [agentSession, setAgentSession] = useState<AgentSessionState | null>(null);
+  const [isPushingGit, setIsPushingGit] = useState(false);
   const [requests, setRequests] = useState<PermissionRequest[]>([]);
   const [quota, setQuota] = useState<QuotaData>({});
   const [pcClipboardText, setPcClipboardText] = useState<string>('');
@@ -192,6 +196,22 @@ export default function App() {
       }
     });
 
+    channel.on('broadcast', { event: 'session:state' }, ({ payload }) => {
+      if (payload?.session) {
+        setAgentSession(payload.session);
+      }
+    });
+
+    channel.on('broadcast', { event: 'git:push_status' }, ({ payload }) => {
+      setIsPushingGit(false);
+      if (payload?.success) {
+        if (navigator.vibrate) navigator.vibrate([100, 50, 150]);
+        alert(payload.message || 'Pushed to GitHub successfully!');
+      } else {
+        alert('Git Push error: ' + (payload?.message || 'Check PC logs'));
+      }
+    });
+
     channel.on('broadcast', { event: 'permission:request' }, ({ payload }) => {
       if (payload?.id) {
         playAlertRingtone();
@@ -294,6 +314,30 @@ export default function App() {
         type: 'broadcast',
         event: 'clipboard:get',
         payload: {},
+      });
+    }
+  };
+
+  const handleSendAgentPrompt = async (prompt: string, autoSend: boolean) => {
+    if (channelRef.current) {
+      await channelRef.current.send({
+        type: 'broadcast',
+        event: 'agent:prompt',
+        payload: { prompt, autoSend },
+      });
+    }
+  };
+
+  const handleRemoteGitPush = async (commandOrMessage?: string) => {
+    setIsPushingGit(true);
+    if (channelRef.current) {
+      await channelRef.current.send({
+        type: 'broadcast',
+        event: 'agent:git_push',
+        payload: {
+          command: commandOrMessage && commandOrMessage.startsWith('git ') ? commandOrMessage : undefined,
+          commitMessage: commandOrMessage && !commandOrMessage.startsWith('git ') ? commandOrMessage : 'feat: updates from OverWatch mobile deck',
+        },
       });
     }
   };
@@ -443,7 +487,28 @@ export default function App() {
         </div>
 
         {/* ========================================================================= */}
-        {/* SCREEN 3 (2 Cards Half & Half): Quick Macros (50%) + Clipboard Beam (50%) */}
+        {/* SCREEN 3 (2 Cards Half & Half): Live Antigravity Session + Prompt Commands */}
+        {/* ========================================================================= */}
+        <div className="w-screen h-full shrink-0 snap-center p-3 sm:p-5 flex items-center justify-center">
+          <div className="w-full max-w-6xl h-full grid grid-cols-1 md:grid-cols-2 landscape:grid-cols-2 gap-3 sm:gap-4 items-stretch">
+            {/* Left Card: Live Antigravity Session (50%) */}
+            <div className="h-full">
+              <AgentSessionCard
+                session={agentSession}
+                onGitPush={handleRemoteGitPush}
+                isPushing={isPushingGit}
+              />
+            </div>
+
+            {/* Right Card: Quick Chat Prompts & Commands (50%) */}
+            <div className="h-full">
+              <AgentPromptDeck onSendPrompt={handleSendAgentPrompt} />
+            </div>
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* SCREEN 4 (2 Cards Half & Half): Quick Macros (50%) + Clipboard Beam (50%) */}
         {/* ========================================================================= */}
         <div className="w-screen h-full shrink-0 snap-center p-3 sm:p-5 flex items-center justify-center">
           <div className="w-full max-w-6xl h-full grid grid-cols-1 md:grid-cols-2 landscape:grid-cols-2 gap-3 sm:gap-4 items-stretch">
@@ -464,9 +529,9 @@ export default function App() {
         </div>
       </main>
 
-      {/* StandBy Pagination Dots (3 Screens) */}
+      {/* StandBy Pagination Dots (4 Screens) */}
       <div className="flex items-center justify-center gap-2 py-2.5 bg-black z-30 shrink-0">
-        {[0, 1, 2].map((page) => (
+        {[0, 1, 2, 3].map((page) => (
           <button
             key={page}
             onClick={() => scrollToPage(page)}

@@ -59,3 +59,36 @@ export interface SystemStats {
   uptimeHours: number;
   hostname: string;
 }
+
+export interface AgentSessionAction {
+  id: string;
+  tool: string;
+  detail: string;
+  status: 'running' | 'completed' | 'denied';
+  timestamp: string;
+}
+
+export interface AgentSessionState {
+  agent: string;
+  conversationId: string;
+  status: 'idle' | 'running' | 'awaiting_approval';
+  model: string;
+  stepCount: number;
+  currentTask: string;
+  currentTool?: string;
+  currentCommand?: string;
+  workspace?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  cacheTokens?: number;
+  lastActive: string;
+  recentActions: AgentSessionAction[];
+  gitStatus?: {
+    hasChanges: boolean;
+    uncommittedCount: number;
+    unpushedCommitsCount: number;
+    suggestedPushCommand: string;
+    branch?: string;
+  };
+}
+

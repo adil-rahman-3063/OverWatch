@@ -1,25 +1,25 @@
-$startupDir = [System.Environment]::GetFolderPath('Startup')
-$shortcutPath = Join-Path $startupDir "OverWatch.lnk"
-$targetScript = Join-Path $PSScriptRoot "..\start-client.bat"
-$vbsPath = Join-Path $PSScriptRoot "overwatch-silent.vbs"
+try {
+    $startupDir = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Startup"
+    $shortcutPath = Join-Path $startupDir "OverWatch.lnk"
+    $trayScript = Join-Path $PSScriptRoot "tray.ps1"
+    $icoPath = Join-Path $PSScriptRoot "..\assets\overwatch.ico"
 
-# Create silent VBScript runner so it runs in the background without a persistent black console window
-$vbsContent = @"
-Set WshShell = CreateObject("WScript.Shell")
-WshShell.Run chr(34) & "$targetScript" & chr(34), 0
-Set WshShell = Nothing
-"@
-Set-Content -Path $vbsPath -Value $vbsContent -Encoding ASCII
+    # Create shortcut in Windows Startup folder to launch silently into System Tray
+    $wsh = New-Object -ComObject WScript.Shell
+    $shortcut = $wsh.CreateShortcut($shortcutPath)
+    $shortcut.TargetPath = "powershell.exe"
+    $shortcut.Arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$trayScript`""
+    $shortcut.WorkingDirectory = (Resolve-Path "$PSScriptRoot\..").Path
+    $shortcut.Description = "OverWatch Windows Client Daemon (System Tray)"
+    if (Test-Path $icoPath) {
+        $shortcut.IconLocation = "$icoPath, 0"
+    }
+    $shortcut.WindowStyle = 7 # Minimized
+    $shortcut.Save()
 
-# Create shortcut in Windows Startup folder
-$wsh = New-Object -ComObject WScript.Shell
-$shortcut = $wsh.CreateShortcut($shortcutPath)
-$shortcut.TargetPath = "wscript.exe"
-$shortcut.Arguments = "`"$vbsPath`""
-$shortcut.WorkingDirectory = (Resolve-Path "$PSScriptRoot\..").Path
-$shortcut.Description = "OverWatch Windows Client Daemon"
-$shortcut.Save()
-
-Write-Host "OverWatch auto-start registered in Windows Startup folder:" -ForegroundColor Green
-Write-Host "  -> $shortcutPath" -ForegroundColor Cyan
-Write-Host "OverWatch will now automatically start in the background when you log in to Windows." -ForegroundColor Green
+    Write-Host "OverWatch auto-start registered in Windows Startup folder:" -ForegroundColor Green
+    Write-Host "  -> $shortcutPath" -ForegroundColor Cyan
+    Write-Host "OverWatch will now automatically start silently in the System Tray when you log in." -ForegroundColor Green
+} catch {
+    Write-Host "Note: Startup folder registration can be completed by double-clicking 'setup.bat' on your PC." -ForegroundColor Yellow
+}

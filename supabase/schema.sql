@@ -1,9 +1,10 @@
 -- ==============================================================================
 -- OverWatch Database Schema for Supabase
 -- Run this script in the Supabase SQL Editor (Dashboard -> SQL Editor -> New Query)
+-- Safe to re-run multiple times (Idempotent)
 -- ==============================================================================
 
--- 1. Enable UUID extension if not already enabled
+-- 1. Enable UUID generation (Native in Postgres 13+, fallback to extension)
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- 2. Media State Table (tracks currently playing track on Windows PC)
@@ -26,7 +27,7 @@ CREATE TABLE IF NOT EXISTS quota_snapshots (
 
 -- 4. Permission Requests Table (Agent tool execution approvals)
 CREATE TABLE IF NOT EXISTS permission_requests (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     device_id TEXT DEFAULT 'default',
     agent TEXT NOT NULL,                -- 'antigravity' | 'claude'
     tool TEXT NOT NULL,                 -- e.g. 'run_command', 'edit_file'
@@ -41,21 +42,31 @@ CREATE TABLE IF NOT EXISTS permission_requests (
 
 -- Index for speedy queries on pending requests
 CREATE INDEX IF NOT EXISTS idx_permission_requests_status ON permission_requests(status, device_id);
+CREATE INDEX IF NOT EXISTS idx_permission_requests_created ON permission_requests(created_at DESC);
 
 -- 5. Enable Row Level Security (RLS)
 ALTER TABLE media_state ENABLE ROW LEVEL SECURITY;
 ALTER TABLE quota_snapshots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE permission_requests ENABLE ROW LEVEL SECURITY;
 
--- For simple single-user setup, allow anon access (can be locked down with Supabase Auth or pairing secret)
+-- Idempotent RLS Policies (Safe to re-run without throwing "policy already exists" errors)
+DROP POLICY IF EXISTS "Allow public read-write for media_state" ON media_state;
 CREATE POLICY "Allow public read-write for media_state" ON media_state FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow public read-write for quota_snapshots" ON quota_snapshots;
 CREATE POLICY "Allow public read-write for quota_snapshots" ON quota_snapshots FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow public read-write for permission_requests" ON permission_requests;
 CREATE POLICY "Allow public read-write for permission_requests" ON permission_requests FOR ALL USING (true) WITH CHECK (true);
 
 -- 6. Enable Realtime Replication for these tables
 -- This allows both the PC client and the Phone web app to listen for live row changes!
 DO $$
 BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+    CREATE PUBLICATION supabase_realtime;
+  END IF;
+
   IF NOT EXISTS (
     SELECT 1 FROM pg_publication_tables 
     WHERE pubname = 'supabase_realtime' AND tablename = 'media_state'
@@ -77,3 +88,16 @@ BEGIN
     ALTER PUBLICATION supabase_realtime ADD TABLE permission_requests;
   END IF;
 END $$;
+
+-- 7. Optional Housekeeping Function (Run periodically or via pg_cron to prune stale logs)
+CREATE OR REPLACE FUNCTION purge_old_permission_requests(older_than_days INT DEFAULT 7)
+RETURNS INT AS $$
+DECLARE
+    deleted_count INT;
+BEGIN
+    DELETE FROM permission_requests
+    WHERE created_at < NOW() - (older_than_days || ' days')::INTERVAL;
+    GET DIAGNOSTICS deleted_count = ROW_COUNT;
+    RETURN deleted_count;
+END;
+$$ LANGUAGE plpgsql;

@@ -1,0 +1,265 @@
+# OverWatch Engineering Journal 📓
+*The Chronicle of Building an OLED Desk Companion & Autonomous AI Interlock*
+
+---
+
+## Log Entry: Project Genesis — The Pitch-Black Vision
+**Date:** November 2026  
+**Mood:** Ambitious, minimalist, caffeinated  
+
+Most desk setups are cluttered with second monitors displaying oversized browser tabs or neon bloatware apps that drain laptop batteries and leak telemetry to third-party clouds. I wanted something completely different:
+
+1. **A dedicated StandBy Desk Deck**: An old smartphone resting in landscape on a MagSafe stand, glowing with pure OLED `#000000`, running a high-tactile split-flap clock, Windows hardware telemetry, and instant music control.
+2. **A Real-Life Physical AI Interlock**: As coding agents like Antigravity and Claude Code become more autonomous in the terminal, trusting them blindly is terrifying, but sitting at the desk clicking *"Allow"* popups every 30 seconds kills developer flow. I wanted my phone on my desk to ring, show the proposed terminal command, let me tap **Allow** from across the room, and hard-block anything I don't explicitly authorize.
+
+No Electron apps on the phone. No bloated app store wrappers. A lightning-fast web client (React, Vite, Tailwind, TypeScript) communicating with a lightweight background Windows daemon (Node.js + WinRT + Supabase Realtime).
+
+---
+
+## Log Entry: The Battle of Windows Media Sessions
+**Topic:** Windows GSMTC vs. Rogue YouTube Tabs  
+
+Controlling music from another device sounds trivial until you actually try to build it on Windows.
+
+Initially, global keyboard emulation (`keybd_event 0xB3` for play/pause) seemed like the easiest path. But it was a disaster in practice: if you were listening to Spotify or YouTube Music and paused a YouTube tutorial video in Chrome 20 minutes ago, hitting play/pause would simultaneously unpause the tutorial video and blast overlapping audio!
+
+We tore out the global keyboard hooks and dug into Windows WinRT via PowerShell:
+- Built `get-media.ps1` and `send-media.ps1` leveraging `Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager`.
+- Queried every active session (`GetSessions()`) and exposed a list of media sources: Spotify, Chrome (YouTube Music), Edge, etc.
+- Scoped command execution directly to the indexed session target:
+  ```powershell
+  $targetSession = $sessions[$SessionIndex]
+  $targetSession.TryTogglePlayPauseAsync()
+  ```
+Now, skipping tracks or toggling play/pause on YouTube Music never wakes up paused browser video tabs.
+
+### The Mobile Touch Conflict
+On the phone's touch screen, swiping left or right to switch StandBy screens was accidentally triggering the media track carousel, and dragging the track scrubber was swiping away the entire page. 
+We isolated touch gestures strictly to the track tile using `e.stopPropagation()` and `touch-action: none`. The inner song slider now glides effortlessly while the outer StandBy screen stays anchored like granite.
+
+---
+
+## Log Entry: The Physicality of Time — 3D Split-Flap Clock
+**Topic:** Mechanical Soul in a Digital Screen  
+
+A standard digital clock on a desk looks sterile. I wanted the tactile nostalgia of a 1960s mechanical split-flap railway departure board.
+
+We built `<FlipClock />` from scratch using CSS 3D perspectives (`perspective-800`, `rotateX` folds):
+- Top leaf folds downwards with an incoming shadow gradient (`animate-flap-top`).
+- Bottom leaf catches the fold and settles with momentum (`animate-flap-bottom`).
+- 12-Hour format with an AM/PM pill indicator and a Focus Sprint Mode toggle.
+
+### The Sound of Flipping Plastic
+A silent split-flap clock has no soul. But loading MP3 sound files over the network introduced latency and audio clipping. Instead, we synthesized the sound in real time using the **Web Audio API**:
+1. A **22ms bandpass noise burst** ($2600\text{ Hz}$, $Q=3.2$) simulating the snap of a physical plastic leaf slapping against the catch.
+2. A simultaneous **triangle wave thud** dropping from $220\text{ Hz} \to 50\text{ Hz}$ in 20ms, simulating the acoustic resonance of the clock's housing.
+
+### The Scoping Dilemma
+The clock ticker runs every second. When users swiped to Screen 2 (Music / Telemetry) or Screen 3 (Macros / Clipboard), the clock was still ticking in the background!
+We resolved this with a dual-layer guard:
+- Wrapped Screen 1 in an `IntersectionObserver` (`threshold: 0.4`).
+- Passed `isActive={isClockVisible && activePageIndex === 0}` into `<FlipClock />`.
+- When inactive, `audioCtx.suspend()` is invoked immediately, ensuring complete silence on all other screens.
+
+---
+
+## Log Entry: The Mobile Gatekeeper — Strict Fail-Closed Security
+**Topic:** Intercepting Antigravity and Claude Code  
+
+This was the crown jewel of OverWatch: turning the phone into an authorized hardware token for agent commands.
+
+We wrote native `PreToolUse` hooks for Antigravity (`client/src/hooks/antigravityHook.ts`) and configured `~/.gemini/config/hooks.json`. Whenever Antigravity wants to execute a terminal command (`run_command`), the hook halts execution on the PC and posts a permission payload to the OverWatch daemon via local IPC (`http://127.0.0.1:49152/hook`).
+
+The daemon beams this request over Supabase Realtime to the mobile device.
+
+### The "Fail-Closed" Milestone
+A loose security gate that falls back to *"allow"* or pops up desktop prompts defeats the entire purpose. We established a strict **Fail-Closed Law**:
+- **Allowed on mobile?** ➔ Command executes with code 0 on the laptop.
+- **Denied on mobile?** ➔ Hard kill. Agent receives `tool call denied by pre-tool hook`.
+- **User walks away / 20s timeout expires?** ➔ Hard kill.
+- **User dismisses / skips on mobile?** ➔ Hard kill.
+- **Daemon offline or phone disconnected?** ➔ Hard kill.
+
+We verified this live when Antigravity attempted an unauthorized terminal command while the daemon was paused — it was instantly blocked with:
+> `Encountered error in tool execution: tool call denied by pre-tool hook: OverWatch mobile approval not granted (timed out or offline). Command blocked.`
+
+Zero clicks needed on the PC. The phone is the sole master key.
+
+---
+
+## Log Entry: Piercing the Mobile Browser Audio Wall
+**Topic:** Beating iOS Safari & Chrome Autoplay Restrictions  
+
+When an agent wants permission, the phone must ring immediately, even if it's resting on a desk across the room.
+
+However, mobile browsers aggressively suspend the `AudioContext` if sound is triggered from an asynchronous background WebSocket callback without a direct touch gesture. Sometimes the alert chime would silently fail.
+
+We built a dedicated audio engine in `web/src/utils/sound.ts`:
+1. **Global Interaction Primer**: Attached passive `touchstart`, `pointerdown`, and `click` listeners that automatically resume and unlock the `AudioContext` on any touch (unlocking PIN, swiping screens).
+2. **Dual-Pulse Ringing Chime ("Ring-Ring!")**: Replaced the short beep with a metallic dual-pulse bell harmonic:
+   - Pulse 1 ($1046.5\text{ Hz} + 1318.5\text{ Hz}$ [C6/E6])
+   - Pulse 2 ($1318.5\text{ Hz} + 1567.9\text{ Hz}$ [E6/G6])
+3. **Multi-Pulse Haptic Vibration**: Added an unmistakable 5-stage phone vibration pattern: `[180ms, 60ms pause, 200ms, 60ms pause, 250ms]`.
+4. **20-Second Countdown Overlay**: Extended the auto-minimize countdown from 10s to 20s with an animated progress bar that tucks into a docked floating badge if unattended.
+
+---
+
+## Log Entry: Desk Armor — PIN Lock & Wake Lock
+**Topic:** Never Sleep, Never Expose  
+
+Leaving a live remote control on a desk invites accidents or unauthorized clicks from passersby.
+
+- **6-Digit PIN Screen (`PinLock.tsx`)**: Built a tactile keypad with haptic feedback, red shake animation on error, and `localStorage` persistence ("Remember this device").
+- **Zero-Sleep Engine**: Mobile OS power managers love turning screens off after 30 seconds. We implemented a dual keep-awake strategy:
+  1. `navigator.wakeLock.request('screen')` re-acquired on visibility change.
+  2. An invisible $1\times 1$ silent looping base64 MP4 video tag fallback that prevents iOS Safari and Android Chrome from sleeping without changing device-level OS settings.
+
+---
+
+## Log Entry: The Flexible Sprint — Mastering Focus Intervals
+**Date:** November 25, 2026  
+**Topic:** Tactical Customization of the Split-Flap Timer  
+
+The 3D split-flap mechanical clock looked stunning, but the Focus Sprint Timer was initially hardcoded to 25 minutes. A developer's rhythm isn't fixed: a quick bug fix needs a 10-minute sprint, while an architectural redesign needs 45 or 60 minutes.
+
+We overhauled `<FlipClock />` to make time completely fluid while preserving the physical mechanical feel:
+- **Duration Preset Bar**: Added clean pill selectors right above the controls: `[5m]`, `[10m]`, `[15m]`, `[25m]`, `[30m]`, `[45m]`, `[60m]`. The active duration glows in warm amber with retro split-flap mechanical feedback on selection.
+- **Bi-Directional Steppers (`+` / `-`)**: Subtly nestled above and below the Minutes flap (`+1m`, `+5m`, `-1m`, `-5m`), allowing the user to dial in *any* custom minute count from 1 to 99.
+- **Direct Tap-to-Increment**: Tapping directly on the Minutes split-flap card increments by +5m with physical flap animation and sound.
+- **Adaptive Memory Reset**: The Reset button now smartly remembers the user's selected duration (e.g. 45m or 15m), rather than blindly resetting to 25m.
+- **Sprint Completion Alarm**: When the countdown reaches `0:00`, it rings the dual-harmonic bell chime and triggers a 5-pulse mobile vibration.
+
+---
+
+## Log Entry: AI Mission Control — Telemetry & Reverse Prompts
+**Date:** November 25, 2026  
+**Topic:** Real-Time Agent Session Inspection & 1-Tap Command Beaming  
+
+Our mobile desk deck already had media control, PC hardware health, and security interlocks. But as developers, what we stare at most is the AI agent itself. We asked: *Can the phone show me what Antigravity is doing in real-time, and let me direct it with one tap?*
+
+We engineered the **AI Mission Control Screen** (Screen 3 in the StandBy carousel), split 50/50:
+
+### 1. Left Half (50%): The Live Ongoing Session Widget (`AgentSessionCard.tsx`)
+- **Real-Time Status Pulsing**: A glowing dot indicates `RUNNING` 🟢 (agent thinking or tool executing), `AWAITING APPROVAL` 🟠 (held by our mobile gatekeeper), or `IDLE` ⚪.
+- **Brain Transcript Scanner**: The background daemon monitors `.gemini/antigravity/brain` in real time, extracting the active conversation ID, active model (`Gemini 3.8 Flash High`, `Claude 3.7`), and step counter (`Step #1295`).
+- **Objective Quote Box**: Pulls the current user goal and displays it front and center.
+- **Active Tool Banner**: When running, highlights the active tool (`run_command`, `edit_file`) with the exact command or file path.
+- **Live Action Stream**: A chronological feed of recent agent actions with status checkmarks and tool icons.
+
+### 2. Right Half (50%): The Preloaded Command Deck (`AgentPromptDeck.tsx`)
+Typing long instructions on a phone touchscreen is frustrating. We created a high-tactile command deck:
+- **Preloaded 1-Tap Prompts**:
+  - ⏩ **Continue**: *"Continue with the next step in the plan."*
+  - 🐛 **Find the Bug**: *"Analyze the codebase and find the root cause of this issue."*
+  - 🧪 **Fix All Tests**: *"Run the test suite and fix any failing tests until they pass."*
+  - 💡 **Explain Changes**: *"Explain what you just changed and the reasoning."*
+  - 🚀 **Commit & Push**: *"Stage all modified files, commit with a concise message, and push to git."*
+  - 📋 **Summarize Status**: *"Summarize current progress and what remains to be done."*
+- **Mobile Custom Command Creator**: Users can tap **`[+]`** to create and name custom prompts directly on their phone, persisted locally in `localStorage`.
+- **Auto-Submit Engine**: When a prompt is beamed, the Windows daemon receives the `agent:prompt` broadcast, places the text on the Windows clipboard, brings the Antigravity/VS Code window to focus, and automatically presses `Ctrl+V` and `{ENTER}`.
+
+---
+
+## Log Entry: Ghost in the Shell — The Windows System Tray Companion
+**Date:** November 25, 2026  
+**Topic:** Eliminating the Persistent Terminal Console  
+
+Running the daemon in a black command prompt window cluttering the Windows desktop felt like an unfinished developer prototype. Background services belong in the background.
+
+We built a native Windows System Tray companion ([tray.ps1](file:///c:/Users/adilr/Documents/open-source/OverWatch/client/scripts/tray.ps1) & [start-tray.bat](file:///c:/Users/adilr/Documents/open-source/OverWatch/start-tray.bat)):
+1. **Custom OverWatch Icon**: Generated a crisp multi-layer vector `.ico` file ([overwatch.ico](file:///c:/Users/adilr/Documents/open-source/OverWatch/client/assets/overwatch.ico)) rendered with `System.Drawing`.
+2. **Hidden Execution**: Spawns the Node process with `WindowStyle = Hidden` and `CreateNoWindow = $true`.
+3. **Windows System Tray (`System.Windows.Forms.NotifyIcon`)**: Sits cleanly in the Windows notification overflow area (`^`), next to Slack and Google Drive.
+4. **Rich Context Menu**: Right-clicking the tray icon gives instant access to:
+   - Live status indicator
+   - Open Web App dashboard
+   - View live logs (`daemon.log` opened in Notepad)
+   - One-click Restart Daemon
+   - Clean Exit
+5. **Windows Startup Registration**: `install-startup.ps1` creates an autostart shortcut in the Windows Startup folder so OverWatch quietly boots into the tray upon login.
+
+---
+
+## Log Entry: Breaking the Sandbox Wall — The Beam-to-Windows Git Push Engine
+**Date:** November 25, 2026  
+**Topic:** AI Agent Sandboxes vs. Host Git Authentication  
+
+One subtle reality of modern agentic coding is the strict security boundary enforced by AI sandboxes:
+1. Sandboxed agent environments intentionally block unsanctioned external network access. Running `git push` inside the sandbox fails with SSL certificate handshake failures (`schannel: SEC_E_UNTRUSTED_ROOT`) or permission locks on `.git/index.lock`.
+2. When an agent finishes writing code, running tests, and updating documentation, the developer is often away from the desk or outside. Without an automatic reminder, work remains stranded locally on the laptop without being pushed to GitHub.
+
+We solved this with a two-fold solution in OverWatch:
+
+### 1. Ambient Mobile Finish Reminder
+The `AgentSessionMonitor` continuously inspects git status via `git status --porcelain` and `git log @{u}..HEAD --oneline`. Whenever the agent transitions from active work to `IDLE` with uncommitted changes or unpushed commits:
+- An amber reminder card instantly illuminates in the mobile session widget:  
+  **`TASK FINISHED • PUSH TO GITHUB`**
+- Shows exact count of modified files and unpushed commits.
+- Generates the exact suggested command with a 1-tap copy button:  
+  `git add -A; git commit -m "feat: updates"; git push origin main`
+
+### 2. "Beam & Push via Windows" Execution Gateway
+Instead of requiring the user to rush back to their PC to open a terminal:
+- Tapping **"Beam & Push via Windows"** on mobile sends an authenticated `agent:git_push` broadcast over Supabase Realtime.
+- The OverWatch Windows Daemon (running natively on the host PC in the system tray, completely outside the agent sandbox) catches the event.
+- The daemon executes the git commit and push using the host's native SSH/HTTPS credentials.
+- It broadcasts back a `git:push_status` event, delivering a tactile haptic vibration and confirmation to the mobile phone.
+
+---
+
+## Log Entry: 1-Click Windows Setup — Frictionless Open-Source Deployment
+**Date:** November 25, 2026  
+**Topic:** Zero-Friction Onboarding for the Community  
+
+To make OverWatch truly open-source ready for anyone cloning the repo:
+- Created [`setup.bat`](file:///c:/Users/adilr/Documents/open-source/OverWatch/setup.bat) and [`setup.ps1`](file:///c:/Users/adilr/Documents/open-source/OverWatch/setup.ps1).
+- Automatically checks prerequisites (Node.js 18+, npm, Git), generates `.env` files from `.env.example`, installs dependencies in parallel, compiles client and web builds, creates the custom vector system tray icon, registers Antigravity hooks, configures Windows startup, and starts the tray daemon.
+
+---
+
+## Log Entry: Agent Compatibility Notice — Antigravity Proven First
+**Date:** November 25, 2026  
+**Topic:** Real-World Validation vs. Experimental Templates  
+
+While OverWatch includes lifecycle hook templates for multiple coding assistants (including Claude Code), we have placed a strict advisory in the documentation:
+- **Google Antigravity** is currently the sole thoroughly tested and verified agent in live developer environments. Every fail-closed timeout, terminal command interception, reverse prompt beam, and session telemetry extraction has been battle-tested against real Antigravity workflows.
+- Other agent hooks (such as Claude Code) are provided as architectural references. Community contributors are explicitly advised to test and verify permission blocking and timeout handling in isolated test directories before relying on them in critical production repos.
+
+---
+
+## Log Entry: Zero-Slop Repository Scrubbing
+**Date:** November 25, 2026  
+**Topic:** Eliminating Dead Code Before the Initial Public Push  
+
+Before opening the repository to the public, we audited every single file:
+- Purged legacy unused components: `ApprovalDeck.tsx`, `Header.tsx`, and `QuotaCard.tsx` (fully superseded by the 4-screen carousel components).
+- Removed orphaned artifacts: `download.svg` and prototype VBScript runners.
+- Verified all credentials strictly reside in `.env`, guarded by `.gitignore`.
+- Every active line of code in the client and web bundles compiles with zero errors under strict TypeScript checks.
+
+---
+
+## Log Entry: Current State of the Art
+**Date:** November 25, 2026 — 21:27 IST  
+**Status:** Feature-Complete. Verified. Open Source Ready.  
+
+```text
+OverWatch System Architecture:
+[Windows PC] <----> [System Tray Daemon] <----> [Supabase Realtime] <----> [Mobile OLED Desk Deck]
+     |                     |                                                    |
+Antigravity Hooks     Hidden Process Runner                               4-Screen Carousel
+Claude Code Hooks     Silent Log Capturing                                3D Split-Flap Clock
+Terminal Gatekeeper   Tray Context Menu                                   AI Mission Control
+Reverse Prompt Beam   WinRT Media Control                                 Remote Git Push Beam
+Host Git Push Gateway Startup Autostart                                   PIN Security Armor
+```
+
+OverWatch has evolved from a simple remote playback script into an ambient physical operating system for the developer desk:
+- **Screen 1**: Mechanical Retro Flip Clock & Customizable Sprint Timer
+- **Screen 2**: Multi-Session Windows Media Controller & PC Hardware Telemetry
+- **Screen 3**: AI Mission Control — Real-Time Agent Telemetry, 1-Tap Prompt Deck & Remote Git Push Reminder
+- **Screen 4**: Workstation Deck — Quick Macros & Universal Clipboard Beam
+
+All running quietly from the Windows System Tray, completely open source with zero hardcoded credentials.
+
+Onward. 🛠️

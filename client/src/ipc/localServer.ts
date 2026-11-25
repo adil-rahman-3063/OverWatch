@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import { config } from '../config.js';
 import { supabaseService } from '../supabase.js';
 import { mediaController } from '../media/windowsMedia.js';
+import { agentSessionMonitor } from '../session/agentSession.js';
 
 export class LocalIpcServer {
   private server: http.Server | null = null;
@@ -60,6 +61,13 @@ export class LocalIpcServer {
             try {
               const payload = JSON.parse(body || '{}');
               const requestId = randomUUID();
+
+              agentSessionMonitor.recordHookStart({
+                tool: payload.tool || 'unknown_tool',
+                command: payload.command || payload.rawArgs || '',
+                cwd: payload.cwd || process.cwd(),
+                conversationId: payload.conversationId,
+              });
 
               const decision = await supabaseService.requestPermission({
                 id: requestId,
