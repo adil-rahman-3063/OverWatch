@@ -1,6 +1,7 @@
 import { createClient, SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
 import { exec } from 'child_process';
 import util from 'util';
+import path from 'path';
 import { config } from './config.js';
 import { mediaController, MediaInfo } from './media/windowsMedia.js';
 import { AntigravityQuotaData } from './quota/antigravityQuota.js';
@@ -100,16 +101,21 @@ export class SupabaseService {
     // 6. Beaming Quick Prompts from Mobile into Antigravity
     this.channel.on('broadcast', { event: 'agent:prompt' }, async ({ payload }) => {
       const text = payload?.prompt;
+      const workspace = payload?.workspace;
+      const workspaceName = workspace ? path.basename(workspace) : '';
+
       if (typeof text === 'string' && text.trim().length > 0) {
-        console.log(`[AgentPrompt] Received mobile prompt: "${text.slice(0, 60)}"`);
+        console.log(`[AgentPrompt] Received mobile prompt for [${workspaceName || 'active session'}]: "${text.slice(0, 60)}"`);
         await setWindowsClipboard(text);
 
         if (payload?.autoSend) {
           try {
             const execPromise = util.promisify(exec);
+            const targetName = workspaceName ? workspaceName.replace(/["`$]/g, '') : 'Antigravity';
             const psScript = `
               $wshell = New-Object -ComObject wscript.shell;
-              $activated = $wshell.AppActivate('Antigravity');
+              $activated = $wshell.AppActivate('${targetName}');
+              if (-not $activated) { $activated = $wshell.AppActivate('Antigravity'); }
               if (-not $activated) { $wshell.AppActivate('Visual Studio Code'); }
               Start-Sleep -Milliseconds 120;
               $wshell.SendKeys('^v');
@@ -118,7 +124,7 @@ export class SupabaseService {
             `;
             const base64 = Buffer.from(psScript, 'utf-8').toString('base64');
             await execPromise(`powershell -NoProfile -NonInteractive -EncodedCommand ${base64}`);
-            console.log(`[AgentPrompt] Successfully pasted and submitted prompt to active editor.`);
+            console.log(`[AgentPrompt] Successfully pasted and submitted prompt.`);
           } catch (err: any) {
             console.warn('[AgentPrompt] SendKeys automated entry failed:', err.message);
           }
@@ -126,25 +132,21 @@ export class SupabaseService {
       }
     });
 
-    // 7. Remote Host Git Push (Executes on Windows Host PC outside the Sandbox)
+    // 7. Beaming Git Push Command to Windows Clipboard (Safe: Beams & Copies, does NOT run)
     this.channel.on('broadcast', { event: 'agent:git_push' }, async ({ payload }) => {
       const workspace = payload?.workspace || process.cwd();
       const customCmd = payload?.command;
       const message = payload?.commitMessage || 'feat: updates from OverWatch mobile deck';
-      console.log(`[GitPush] Received remote push trigger for: ${workspace}`);
+      const cleanMsg = message.replace(/["`$]/g, '');
+      const pushCommand = customCmd && typeof customCmd === 'string'
+        ? customCmd
+        : `git add -A; git commit -m "${cleanMsg}"; git push origin main`;
+
+      console.log(`[GitPush] Beaming push command to Windows clipboard for: ${workspace}`);
 
       try {
-        const execPromise = util.promisify(exec);
-        let psCmd: string;
-        if (customCmd && typeof customCmd === 'string') {
-          psCmd = `powershell -NoProfile -Command "${customCmd.replace(/"/g, '`"')}"`;
-        } else {
-          const cleanMsg = message.replace(/["`$]/g, '');
-          psCmd = `powershell -NoProfile -Command "git add -A; git commit -m '${cleanMsg}'; git push origin main"`;
-        }
-        console.log(`[GitPush] Executing: ${psCmd}`);
-        const { stdout, stderr } = await execPromise(psCmd, { cwd: workspace, timeout: 45000 });
-        console.log('[GitPush] Success:\n', stdout);
+        await setWindowsClipboard(pushCommand);
+        console.log('[GitPush] Copied to Windows clipboard:', pushCommand);
 
         if (this.channel) {
           await this.channel.send({
@@ -152,22 +154,22 @@ export class SupabaseService {
             event: 'git:push_status',
             payload: {
               success: true,
-              message: 'Successfully committed & pushed to GitHub main branch!',
-              output: stdout || stderr,
+              message: 'Push command beamed to Windows clipboard! Paste in your host terminal to push.',
+              command: pushCommand,
+              workspace,
               timestamp: new Date().toISOString(),
             },
           });
         }
       } catch (err: any) {
-        console.error('[GitPush] Push failed:', err.message);
+        console.error('[GitPush] Clipboard copy failed:', err.message);
         if (this.channel) {
           await this.channel.send({
             type: 'broadcast',
             event: 'git:push_status',
             payload: {
               success: false,
-              message: err.message,
-              output: err.stdout || err.stderr || err.message,
+              message: 'Failed to copy to clipboard: ' + err.message,
               timestamp: new Date().toISOString(),
             },
           });
@@ -196,8 +198,16 @@ export class SupabaseService {
       )
       .subscribe();
 
+    // 8. Client Ping from Mobile (Immediate Heartbeat Probe)
+    this.channel.on('broadcast', { event: 'client:ping' }, async () => {
+      await this.publishHeartbeat();
+    });
+
     this.channel.subscribe((status) => {
       console.log(`[Supabase] Realtime channel status: ${status}`);
+      if (status === 'SUBSCRIBED') {
+        this.publishHeartbeat().catch(() => {});
+      }
       if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
         console.warn(`[Supabase] Re-subscribing in 2.5s due to ${status}...`);
         setTimeout(() => {
@@ -292,6 +302,21 @@ export class SupabaseService {
             deviceId: config.deviceId,
             session,
             updatedAt: new Date().toISOString(),
+          },
+        });
+      }
+    } catch {}
+  }
+
+  async publishHeartbeat(): Promise<void> {
+    try {
+      if (this.channel) {
+        await this.channel.send({
+          type: 'broadcast',
+          event: 'client:heartbeat',
+          payload: {
+            deviceId: config.deviceId,
+            timestamp: Date.now(),
           },
         });
       }

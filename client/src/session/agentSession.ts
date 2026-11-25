@@ -24,6 +24,9 @@ export interface AgentSessionState {
   currentTool?: string;
   currentCommand?: string;
   workspace?: string;
+  workspaceName?: string;
+  sessions?: AgentSessionState[];
+  activeSessionIndex?: number;
   inputTokens?: number;
   outputTokens?: number;
   cacheTokens?: number;
@@ -83,12 +86,12 @@ export class AgentSessionMonitor {
   }
 
   /**
-   * Discovers the active/newest Antigravity conversation directory in ~/.gemini/antigravity/brain
+   * Discovers active Antigravity conversation directories in ~/.gemini/antigravity/brain
    */
-  private findLatestConversationDir(): { dirPath: string; id: string } | null {
+  private findActiveConversationDirs(limit: number = 6): { dirPath: string; id: string; mtime: number }[] {
     try {
       const brainDir = path.join(os.homedir(), '.gemini', 'antigravity', 'brain');
-      if (!fs.existsSync(brainDir)) return null;
+      if (!fs.existsSync(brainDir)) return [];
 
       const entries = fs.readdirSync(brainDir, { withFileTypes: true });
       const dirsWithLogs = entries
@@ -107,43 +110,25 @@ export class AgentSessionMonitor {
         })
         .filter(Boolean) as { id: string; dirPath: string; mtime: number }[];
 
-      if (dirsWithLogs.length === 0) return null;
-
+      if (dirsWithLogs.length === 0) return [];
       dirsWithLogs.sort((a, b) => b.mtime - a.mtime);
-      return dirsWithLogs[0];
+      return dirsWithLogs.slice(0, limit);
     } catch {
-      return null;
+      return [];
     }
   }
 
   /**
-   * Scans the latest conversation transcript to extract live telemetry
+   * Parses an individual conversation transcript to extract its session state
    */
-  async getSessionState(): Promise<AgentSessionState> {
-    const latestConv = this.findLatestConversationDir();
-    const now = Date.now();
-
-    const fallback: AgentSessionState = {
-      agent: 'antigravity',
-      conversationId: this.lastHookAction?.conversationId || latestConv?.id || 'idle',
-      status: this.pendingApproval ? 'awaiting_approval' : 'idle',
-      model: 'gemini-3.8-flash-high',
-      stepCount: 0,
-      currentTask: 'Waiting for agent task...',
-      workspace: this.lastHookAction?.cwd || process.cwd(),
-      lastActive: new Date().toISOString(),
-      recentActions: this.recentHookActions,
-    };
-
-    if (!latestConv) return fallback;
-
-    const logPath = path.join(latestConv.dirPath, '.system_generated', 'logs', 'transcript.jsonl');
-    if (!fs.existsSync(logPath)) return fallback;
+  private async parseConversation(conv: { dirPath: string; id: string; mtime: number }): Promise<AgentSessionState | null> {
+    const logPath = path.join(conv.dirPath, '.system_generated', 'logs', 'transcript.jsonl');
+    if (!fs.existsSync(logPath)) return null;
 
     try {
       const content = fs.readFileSync(logPath, 'utf8');
       const lines = content.trim().split('\n').filter(Boolean);
-      if (lines.length === 0) return fallback;
+      if (lines.length === 0) return null;
 
       let lastModel = 'gemini-3.8-flash-high';
       let lastStepIndex = lines.length;
@@ -152,11 +137,22 @@ export class AgentSessionMonitor {
       let outputTokens = 0;
       let cacheTokens = 0;
       let lastEntryTime = 0;
+      let discoveredWorkspace = '';
 
       const actionsFromLog: AgentSessionAction[] = [];
 
-      // Scan backwards through the last 40 lines for context
-      const sample = lines.slice(-40);
+      // Check early lines for workspace definition
+      for (const line of lines.slice(0, 15)) {
+        if (!discoveredWorkspace) {
+          const wsMatch = line.match(/(?:Command Working Directory|Active Workspaces:[\s\S]*?-)\s*([a-zA-Z]:\\[^\r\n"\\,]+)/i);
+          if (wsMatch) {
+            discoveredWorkspace = wsMatch[1].trim();
+          }
+        }
+      }
+
+      // Scan backwards through the last 30 lines for activity
+      const sample = lines.slice(-30);
       for (const line of sample) {
         try {
           const entry = JSON.parse(line);
@@ -170,14 +166,29 @@ export class AgentSessionMonitor {
             if (t > lastEntryTime) lastEntryTime = t;
           }
 
-          // Extract user prompt
           if (entry.type === 'USER_INPUT' && entry.content) {
             const rawContent = String(entry.content);
             const match = rawContent.match(/<USER_REQUEST>([\s\S]*?)<\/USER_REQUEST>/);
             lastUserPrompt = match ? match[1].trim() : rawContent.slice(0, 150).trim();
           }
 
-          // Extract tool calls
+          if (!discoveredWorkspace && entry.tool_calls) {
+            for (const call of entry.tool_calls) {
+              const pathArg = call.args?.Path || call.args?.CommandLine;
+              if (pathArg && typeof pathArg === 'string') {
+                const match = pathArg.match(/([a-zA-Z]:\\[^"'\r\n]+)/);
+                if (match) {
+                  const p = match[1];
+                  try {
+                    discoveredWorkspace = fs.existsSync(p) && fs.statSync(p).isDirectory() ? p : path.dirname(p);
+                  } catch {
+                    discoveredWorkspace = path.dirname(p);
+                  }
+                }
+              }
+            }
+          }
+
           if (Array.isArray(entry.tool_calls)) {
             for (const call of entry.tool_calls) {
               const detail =
@@ -199,43 +210,82 @@ export class AgentSessionMonitor {
         } catch {}
       }
 
-      // Determine running status
-      const timeSinceLastAction = now - Math.max(lastEntryTime, this.lastHookAction?.timestamp || 0);
-      let status: 'idle' | 'running' | 'awaiting_approval' = 'idle';
+      const isCurrentHook = this.lastHookAction?.conversationId === conv.id;
+      const activeWorkspace = discoveredWorkspace || (isCurrentHook ? this.lastHookAction?.cwd : null) || process.cwd();
+      const workspaceName = path.basename(activeWorkspace) || 'Workspace';
 
-      if (this.pendingApproval) {
+      const timeSinceAction = Date.now() - Math.max(lastEntryTime, isCurrentHook ? this.lastHookAction?.timestamp || 0 : 0);
+
+      let status: 'idle' | 'running' | 'awaiting_approval' = 'idle';
+      if (this.pendingApproval && isCurrentHook) {
         status = 'awaiting_approval';
-      } else if (timeSinceLastAction < 20000) {
-        // Active within last 20 seconds
+      } else if (timeSinceAction < 25000) {
         status = 'running';
       }
 
-      // Combine hook actions and transcript actions
-      const combinedActions = [...this.recentHookActions, ...actionsFromLog].slice(0, 8);
-      const activeWorkspace = this.lastHookAction?.cwd || process.cwd();
       const gitStatus = await this.checkGitStatus(activeWorkspace, lastUserPrompt);
+      const hookActions = isCurrentHook ? this.recentHookActions : [];
+      const combinedActions = [...hookActions, ...actionsFromLog].slice(0, 8);
 
       return {
         agent: 'antigravity',
-        conversationId: latestConv.id,
+        conversationId: conv.id,
         status,
         model: lastModel,
         stepCount: lastStepIndex,
         currentTask: lastUserPrompt || 'Working on codebase tasks...',
-        currentTool: this.lastHookAction?.tool,
-        currentCommand: this.lastHookAction?.command,
+        currentTool: isCurrentHook ? this.lastHookAction?.tool : undefined,
+        currentCommand: isCurrentHook ? this.lastHookAction?.command : undefined,
         workspace: activeWorkspace,
+        workspaceName,
         inputTokens,
         outputTokens,
         cacheTokens,
-        lastActive: new Date(Math.max(lastEntryTime, this.lastHookAction?.timestamp || now)).toISOString(),
+        lastActive: new Date(Math.max(lastEntryTime, isCurrentHook ? this.lastHookAction?.timestamp || 0 : conv.mtime)).toISOString(),
         recentActions: combinedActions,
         gitStatus,
       };
-    } catch (err: any) {
-      console.warn('[AgentSession] Error parsing transcript:', err.message);
-      return fallback;
+    } catch {
+      return null;
     }
+  }
+
+  /**
+   * Scans active conversations to extract all live sessions
+   */
+  async getSessionState(): Promise<AgentSessionState> {
+    const convDirs = this.findActiveConversationDirs(6);
+    const sessions: AgentSessionState[] = [];
+
+    for (const conv of convDirs) {
+      const parsed = await this.parseConversation(conv);
+      if (parsed) {
+        sessions.push(parsed);
+      }
+    }
+
+    if (sessions.length === 0) {
+      return {
+        agent: 'antigravity',
+        conversationId: this.lastHookAction?.conversationId || 'idle',
+        status: this.pendingApproval ? 'awaiting_approval' : 'idle',
+        model: 'gemini-3.8-flash-high',
+        stepCount: 0,
+        currentTask: 'Waiting for agent task...',
+        workspace: this.lastHookAction?.cwd || process.cwd(),
+        workspaceName: path.basename(this.lastHookAction?.cwd || process.cwd()),
+        lastActive: new Date().toISOString(),
+        recentActions: this.recentHookActions,
+        sessions: [],
+      };
+    }
+
+    const primary = sessions[0];
+    return {
+      ...primary,
+      sessions,
+      activeSessionIndex: 0,
+    };
   }
 
   private async checkGitStatus(workspace: string, lastTask: string) {

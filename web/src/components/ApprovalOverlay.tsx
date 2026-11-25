@@ -93,24 +93,24 @@ export const ApprovalOverlay: React.FC<ApprovalOverlayProps> = ({ requests, onDe
   }
 
   // =========================================================================
-  // EXPANDED STATE: Full Approval Overlay Card
+  // EXPANDED STATE: Full Approval Overlay Card (Viewport-Locked & Touch-Safe)
   // =========================================================================
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-end sm:items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-hidden animate-in fade-in duration-150"
       onPointerDown={() => setIsPaused(true)}
     >
-      <div className="w-full max-w-lg bg-[#09090c] border border-amber-500/60 rounded-2xl p-4 sm:p-5 shadow-2xl space-y-3.5 relative overflow-hidden">
+      <div className="w-full max-w-lg max-h-[96dvh] bg-[#09090c] border border-amber-500/60 rounded-2xl shadow-2xl flex flex-col relative overflow-hidden">
         {/* Top 20-Second Countdown Progress Bar */}
-        <div className="absolute top-0 left-0 right-0 h-1 bg-neutral-900 overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-1 bg-neutral-900 overflow-hidden z-10">
           <div
             className="h-full bg-amber-400 transition-all duration-1000 ease-linear"
             style={{ width: `${(secondsRemaining / 20) * 100}%` }}
           />
         </div>
 
-        {/* Header */}
-        <div className="flex items-center justify-between pb-2.5 border-b border-[#1c1c24]">
+        {/* Header - Pinned at Top (shrink-0) */}
+        <div className="flex items-center justify-between px-3.5 sm:px-5 pt-3.5 pb-2.5 border-b border-[#1c1c24] shrink-0">
           <div className="flex items-center gap-2">
             <span className="relative flex h-2.5 w-2.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
@@ -123,7 +123,7 @@ export const ApprovalOverlay: React.FC<ApprovalOverlayProps> = ({ requests, onDe
 
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-mono text-neutral-400">
-              {isPaused ? 'Timer paused' : `Minimizes in ${secondsRemaining}s`}
+              {isPaused ? 'Timer paused' : `${secondsRemaining}s`}
             </span>
             <button
               onClick={() => setIsMinimized(true)}
@@ -135,9 +135,9 @@ export const ApprovalOverlay: React.FC<ApprovalOverlayProps> = ({ requests, onDe
           </div>
         </div>
 
-        {/* Active Pending Request */}
+        {/* Scrollable Middle Area: Details & Command Preview */}
         {activeRequest && (
-          <div className="space-y-3">
+          <div className="flex-1 min-h-0 overflow-y-auto px-3.5 sm:px-5 py-2.5 space-y-2 sm:space-y-2.5 overscroll-contain">
             <div className="flex items-center justify-between text-xs font-mono">
               <span className="flex items-center gap-1.5 text-neutral-200 font-medium">
                 <Bot className="w-3.5 h-3.5 text-cyan-400" />
@@ -155,20 +155,38 @@ export const ApprovalOverlay: React.FC<ApprovalOverlayProps> = ({ requests, onDe
               </div>
             )}
 
-            <div className="bg-[#050507] rounded-xl p-3 border border-[#1e1e24] font-mono text-xs text-neutral-200 break-all max-h-36 overflow-y-auto">
+            <div className="bg-[#050507] rounded-xl p-2.5 sm:p-3 border border-[#1e1e24] font-mono text-xs text-neutral-200 break-all max-h-24 sm:max-h-36 overflow-y-auto">
               <div className="flex items-center gap-1 text-[9px] text-neutral-500 mb-1">
                 <Terminal className="w-2.5 h-2.5 text-neutral-500" />
                 <span>Command execution</span>
               </div>
               <code className="text-emerald-400 font-medium">{activeRequest.command || '(no command string)'}</code>
             </div>
+          </div>
+        )}
+
+        {/* Pinned Action Controls - ALWAYS Visible and Touchable in Viewport (shrink-0) */}
+        {activeRequest && (
+          <div className="px-3.5 sm:px-5 pb-3 sm:pb-4 pt-2 border-t border-[#1c1c24] bg-[#09090c] shrink-0 space-y-2">
+            {/* If more than 1 request is pending, offer "Approve All" prominently above the single buttons */}
+            {totalPending > 1 && (
+              <button
+                onClick={() => {
+                  pendingRequests.forEach((req) => onDecision(req.id, 'allow'));
+                }}
+                className="w-full py-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/60 text-emerald-300 hover:bg-emerald-500/20 active:scale-98 font-mono text-xs font-bold flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(16,185,129,0.15)] transition-all"
+              >
+                <Check className="w-3.5 h-3.5 stroke-[3] text-emerald-400" />
+                <span>Approve All ({totalPending}) Pending Commands</span>
+              </button>
+            )}
 
             {/* Giant Tactile Touch Action Pads: Skip | Deny | Allow */}
-            <div className="grid grid-cols-3 gap-2.5 pt-1">
+            <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
               {/* Skip Button: Dismisses from mobile so user can act on laptop */}
               <button
                 onClick={() => onDecision(activeRequest.id, 'skip')}
-                className="h-12 rounded-xl bg-[#121217] border border-neutral-700 hover:border-neutral-500 text-neutral-300 font-mono text-xs font-medium flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
+                className="h-11 sm:h-12 rounded-xl bg-[#121217] border border-neutral-700 hover:border-neutral-500 text-neutral-300 font-mono text-xs font-medium flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
                 title="Dismiss from phone (decide on laptop)"
               >
                 <SkipForward className="w-3.5 h-3.5 text-neutral-400" />
@@ -178,7 +196,7 @@ export const ApprovalOverlay: React.FC<ApprovalOverlayProps> = ({ requests, onDe
               {/* Deny Button */}
               <button
                 onClick={() => onDecision(activeRequest.id, 'deny')}
-                className="h-12 rounded-xl bg-[#140b0e] border border-rose-500/50 hover:border-rose-500 text-rose-400 font-mono text-xs font-medium flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
+                className="h-11 sm:h-12 rounded-xl bg-[#140b0e] border border-rose-500/50 hover:border-rose-500 text-rose-400 font-mono text-xs font-medium flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
               >
                 <X className="w-4 h-4" />
                 <span>Deny</span>
@@ -187,25 +205,12 @@ export const ApprovalOverlay: React.FC<ApprovalOverlayProps> = ({ requests, onDe
               {/* Allow Button */}
               <button
                 onClick={() => onDecision(activeRequest.id, 'allow')}
-                className="h-12 rounded-xl bg-white text-black hover:bg-neutral-200 font-mono text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-lg shadow-white/10"
+                className="h-11 sm:h-12 rounded-xl bg-white text-black hover:bg-neutral-200 font-mono text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-lg shadow-white/10"
               >
                 <Check className="w-4 h-4 stroke-[3]" />
                 <span>Allow</span>
               </button>
             </div>
-
-            {/* If more than 1 request is pending, offer "Approve All" */}
-            {totalPending > 1 && (
-              <button
-                onClick={() => {
-                  pendingRequests.forEach((req) => onDecision(req.id, 'allow'));
-                }}
-                className="w-full py-2 rounded-lg bg-[#14141c] border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 font-mono text-[11px] font-medium flex items-center justify-center gap-1.5 transition-colors"
-              >
-                <Check className="w-3 h-3 stroke-[3]" />
-                <span>Approve All ({totalPending}) Pending Commands</span>
-              </button>
-            )}
           </div>
         )}
       </div>

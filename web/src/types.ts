@@ -78,6 +78,9 @@ export interface AgentSessionState {
   currentTool?: string;
   currentCommand?: string;
   workspace?: string;
+  workspaceName?: string;
+  sessions?: AgentSessionState[];
+  activeSessionIndex?: number;
   inputTokens?: number;
   outputTokens?: number;
   cacheTokens?: number;

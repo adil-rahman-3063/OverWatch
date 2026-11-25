@@ -75,6 +75,15 @@ async function bootstrap() {
   await pollAgentSession();
   setInterval(pollAgentSession, 3000);
 
+  // 5. Watchdog Heartbeat Pulse (every 3 seconds)
+  async function sendHeartbeat() {
+    try {
+      await supabaseService.publishHeartbeat();
+    } catch {}
+  }
+  await sendHeartbeat();
+  setInterval(sendHeartbeat, 3000);
+
   console.log('\n[OverWatch] Daemon is actively running. Press Ctrl+C to terminate.\n');
 }
 

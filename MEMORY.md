@@ -239,26 +239,46 @@ Before opening the repository to the public, we audited every single file:
 
 ---
 
+## Log Entry: Viewport-Locked Widget Decks & Multi-Session Agent Targeting
+**Date:** November 25, 2026  
+**Topic:** Hardware Desk Deck Ergonomics & Multi-Project Routing  
+
+As developers often run multiple concurrent agent sessions (e.g. `OverWatch` and `portfolio`), we upgraded OverWatch's hardware UI and routing engine:
+
+### 1. Viewport Lock & Internal Touch Decks
+- The mobile webpage is locked strictly to `fixed inset-0 w-full h-[100dvh] overflow-hidden overscroll-none`. The webpage itself never scrolls or bounces.
+- Horizontal navigation is encapsulated within internal `WidgetDeck` touch containers (`touch-action: pan-y; e.stopPropagation()`) with smooth rubberband resistance and tactile haptics.
+
+### 2. Multi-Session Discovery & Workspace Routing
+- `AgentSessionMonitor` scans `~/.gemini/antigravity/brain`, discovering all active conversation transcripts within the last 6 sessions.
+- In `AgentSessionCard`, users can swipe left/right across active agent sessions, inspecting each workspace directory path and live git status.
+- Swiping dynamically switches the active workspace target: prompt commands from the Prompt Deck and push beams are routed precisely to the active workspace in view.
+
+### 3. Safe Git Push Beaming (Zero Auto-Run)
+- Git push operations frequently fail when auto-executed via background daemons due to SSH keys, passphrases, or lockfiles.
+- OverWatch adopts **Safe Push Beaming**: clicking "Push" on mobile beams the exact `git add -A; git commit -m "..."; git push origin main` command directly to the Windows clipboard, and activates the workspace terminal window so the developer can paste and run safely.
+
+### 4. True Watchdog Heartbeat & Daemon Resilience
+- **Watchdog Heartbeat**: Replaced simple Supabase channel connection status (which falsely displayed "Live" even when the Windows PC was turned off) with a real 3-second heartbeat pulse (`client:heartbeat`). If the PC daemon stops, the mobile deck flips to **`PC Offline`** after 7.5 seconds.
+- **Port Resilience**: `localServer.ts` catches `EADDRINUSE` gracefully, running in companion mode if another tray instance is active.
+- **Strict Typing**: Fixed syntax and interface typing in `agentSession.ts`, ensuring clean builds across client and web.
+
+---
+
 ## Log Entry: Current State of the Art
-**Date:** November 25, 2026 — 21:27 IST  
+**Date:** November 25, 2026 — 21:55 IST  
 **Status:** Feature-Complete. Verified. Open Source Ready.  
 
 ```text
 OverWatch System Architecture:
 [Windows PC] <----> [System Tray Daemon] <----> [Supabase Realtime] <----> [Mobile OLED Desk Deck]
      |                     |                                                    |
-Antigravity Hooks     Hidden Process Runner                               4-Screen Carousel
-Claude Code Hooks     Silent Log Capturing                                3D Split-Flap Clock
-Terminal Gatekeeper   Tray Context Menu                                   AI Mission Control
-Reverse Prompt Beam   WinRT Media Control                                 Remote Git Push Beam
-Host Git Push Gateway Startup Autostart                                   PIN Security Armor
+Antigravity Hooks     Hidden Process Runner                               Dual Swipable WidgetDecks
+Terminal Gatekeeper   Watchdog Heartbeat Pulse (3s)                       Real-time PC Live/Offline Indicator
+Multi-Session Scan    Safe Push Beam to Clipboard                         3D Split-Flap Clock & Timer
+Targeted AppActivate  WinRT Media & Telemetry                             Multi-Session Agent Deck
+Startup Autostart     Companion Port Handshake                            Universal Clipboard & Macros
 ```
-
-OverWatch has evolved from a simple remote playback script into an ambient physical operating system for the developer desk:
-- **Screen 1**: Mechanical Retro Flip Clock & Customizable Sprint Timer
-- **Screen 2**: Multi-Session Windows Media Controller & PC Hardware Telemetry
-- **Screen 3**: AI Mission Control — Real-Time Agent Telemetry, 1-Tap Prompt Deck & Remote Git Push Reminder
-- **Screen 4**: Workstation Deck — Quick Macros & Universal Clipboard Beam
 
 All running quietly from the Windows System Tray, completely open source with zero hardcoded credentials.
 

@@ -9,7 +9,8 @@ import { AgentSessionCard } from './components/AgentSessionCard.tsx';
 import { AgentPromptDeck } from './components/AgentPromptDeck.tsx';
 import { ApprovalOverlay } from './components/ApprovalOverlay.tsx';
 import { PinLock } from './components/PinLock.tsx';
-import { Lock } from 'lucide-react';
+import { WidgetDeck, WidgetItem } from './components/WidgetDeck.tsx';
+import { Lock, Clock, Music, Bot, Zap, Activity, MessageSquare, Clipboard, Timer } from 'lucide-react';
 import { AgentSessionState, MediaState, PermissionRequest, QuotaData, SystemStats } from './types.ts';
 import { playAlertRingtone } from './utils/sound.ts';
 
@@ -27,9 +28,11 @@ export default function App() {
     );
   });
   const [connected, setConnected] = useState(false);
-  const [activePageIndex, setActivePageIndex] = useState(0);
-  const [isClockVisible, setIsClockVisible] = useState(true);
-  const clockContainerRef = useRef<HTMLDivElement>(null);
+  const [lastSeenPc, setLastSeenPc] = useState<number>(0);
+  const [now, setNow] = useState<number>(Date.now());
+  const [leftWidgetIndex, setLeftWidgetIndex] = useState(0);
+  const [rightWidgetIndex, setRightWidgetIndex] = useState(0);
+  const [activeWorkspace, setActiveWorkspace] = useState<string>('');
   const [media, setMedia] = useState<MediaState>({
     title: '',
     artist: '',
@@ -44,7 +47,6 @@ export default function App() {
   const [pcClipboardText, setPcClipboardText] = useState<string>('');
 
   const channelRef = useRef<any>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   // =========================================================================
@@ -95,6 +97,14 @@ export default function App() {
         wakeLock.release().catch(() => {});
       }
     };
+  }, []);
+
+  // Watchdog ticker for PC daemon live status
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
   }, []);
 
   // =========================================================================
@@ -163,7 +173,12 @@ export default function App() {
 
     channelRef.current = channel;
 
+    channel.on('broadcast', { event: 'client:heartbeat' }, () => {
+      setLastSeenPc(Date.now());
+    });
+
     channel.on('broadcast', { event: 'media:state' }, ({ payload }) => {
+      setLastSeenPc(Date.now());
       if (payload) {
         setMedia({
           title: payload.title || '',
@@ -179,26 +194,33 @@ export default function App() {
     });
 
     channel.on('broadcast', { event: 'telemetry:state' }, ({ payload }) => {
+      setLastSeenPc(Date.now());
       if (payload?.stats) {
         setStats(payload.stats);
       }
     });
 
     channel.on('broadcast', { event: 'quota:state' }, ({ payload }) => {
+      setLastSeenPc(Date.now());
       if (payload?.antigravity) {
         setQuota({ antigravity: payload.antigravity });
       }
     });
 
     channel.on('broadcast', { event: 'clipboard:state' }, ({ payload }) => {
+      setLastSeenPc(Date.now());
       if (typeof payload?.text === 'string') {
         setPcClipboardText(payload.text);
       }
     });
 
     channel.on('broadcast', { event: 'session:state' }, ({ payload }) => {
+      setLastSeenPc(Date.now());
       if (payload?.session) {
         setAgentSession(payload.session);
+        if (payload.session.workspace) {
+          setActiveWorkspace((prev) => prev || payload.session.workspace);
+        }
       }
     });
 
@@ -270,6 +292,13 @@ export default function App() {
 
     channel.subscribe((status) => {
       setConnected(status === 'SUBSCRIBED');
+      if (status === 'SUBSCRIBED') {
+        channel.send({
+          type: 'broadcast',
+          event: 'client:ping',
+          payload: { timestamp: Date.now() },
+        }).catch(() => {});
+      }
     });
 
     return () => {
@@ -318,18 +347,19 @@ export default function App() {
     }
   };
 
-  const handleSendAgentPrompt = async (prompt: string, autoSend: boolean) => {
+  const handleSendAgentPrompt = async (prompt: string, autoSend: boolean, workspaceOverride?: string) => {
     if (channelRef.current) {
       await channelRef.current.send({
         type: 'broadcast',
         event: 'agent:prompt',
-        payload: { prompt, autoSend },
+        payload: { prompt, autoSend, workspace: workspaceOverride || activeWorkspace },
       });
     }
   };
 
-  const handleRemoteGitPush = async (commandOrMessage?: string) => {
+  const handleRemoteGitPush = async (commandOrMessage?: string, workspaceOverride?: string) => {
     setIsPushingGit(true);
+    const targetWs = workspaceOverride || activeWorkspace;
     if (channelRef.current) {
       await channelRef.current.send({
         type: 'broadcast',
@@ -337,6 +367,7 @@ export default function App() {
         payload: {
           command: commandOrMessage && commandOrMessage.startsWith('git ') ? commandOrMessage : undefined,
           commitMessage: commandOrMessage && !commandOrMessage.startsWith('git ') ? commandOrMessage : 'feat: updates from OverWatch mobile deck',
+          workspace: targetWs,
         },
       });
     }
@@ -369,38 +400,6 @@ export default function App() {
     }
   };
 
-  // Observe clock screen visibility to mute mechanical flip sound when swiped to Screen 2 or 3
-  useEffect(() => {
-    if (!clockContainerRef.current) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          setIsClockVisible(entry.isIntersecting && entry.intersectionRatio > 0.4);
-        }
-      },
-      { threshold: [0.1, 0.4, 0.7] }
-    );
-    observer.observe(clockContainerRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  const handleScroll = () => {
-    if (scrollContainerRef.current) {
-      const { scrollLeft, clientWidth } = scrollContainerRef.current;
-      const index = Math.round(scrollLeft / clientWidth);
-      setActivePageIndex(index);
-    }
-  };
-
-  const scrollToPage = (index: number) => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTo({
-        left: index * scrollContainerRef.current.clientWidth,
-        behavior: 'smooth',
-      });
-    }
-  };
-
   if (!isAuthenticated) {
     return (
       <PinLock
@@ -410,8 +409,128 @@ export default function App() {
     );
   }
 
+  const leftWidgetItems: WidgetItem[] = [
+    {
+      id: 'clock',
+      title: 'Split-Flap Clock',
+      shortLabel: 'Retro Clock',
+      icon: <Clock className="w-3.5 h-3.5 text-amber-400" />,
+      component: (
+        <div className="h-full w-full flex items-center justify-center p-2 sm:p-3 overflow-hidden">
+          <FlipClock isActive={leftWidgetIndex === 0} />
+        </div>
+      ),
+    },
+    {
+      id: 'media',
+      title: 'Windows Media',
+      shortLabel: 'Media Player',
+      icon: <Music className="w-3.5 h-3.5 text-emerald-400" />,
+      component: (
+        <div className="h-full w-full overflow-hidden">
+          <MediaCard media={media} onAction={handleMediaAction} />
+        </div>
+      ),
+    },
+    {
+      id: 'agent-session',
+      title: 'Antigravity Session',
+      shortLabel: 'AI Session',
+      icon: <Bot className="w-3.5 h-3.5 text-cyan-400" />,
+      component: (
+        <div className="h-full w-full overflow-hidden">
+          <AgentSessionCard
+            session={agentSession}
+            onSelectSession={(sess) => {
+              if (sess?.workspace) {
+                setActiveWorkspace(sess.workspace);
+              }
+            }}
+            onGitPush={(customCmd) => handleRemoteGitPush(customCmd, activeWorkspace)}
+            isPushing={isPushingGit}
+          />
+        </div>
+      ),
+    },
+    {
+      id: 'macros',
+      title: 'Workstation Macros',
+      shortLabel: 'Quick Macros',
+      icon: <Zap className="w-3.5 h-3.5 text-yellow-400" />,
+      component: (
+        <div className="h-full w-full overflow-hidden">
+          <MacroDeck onMacro={handleMacroAction} />
+        </div>
+      ),
+    },
+  ];
+
+  const rightWidgetItems: WidgetItem[] = [
+    {
+      id: 'telemetry',
+      title: 'Hardware & Quota',
+      shortLabel: 'Telemetry & Quota',
+      icon: <Activity className="w-3.5 h-3.5 text-blue-400" />,
+      component: (
+        <div className="h-full w-full overflow-hidden">
+          <HardwareTelemetry stats={stats} quota={quota} />
+        </div>
+      ),
+    },
+    {
+      id: 'agent-prompts',
+      title: 'Prompt Commands',
+      shortLabel: 'Prompt Deck',
+      icon: <MessageSquare className="w-3.5 h-3.5 text-amber-400" />,
+      component: (
+        <div className="h-full w-full overflow-hidden">
+          <AgentPromptDeck
+            onSendPrompt={(prompt, autoSend) =>
+              handleSendAgentPrompt(prompt, autoSend, activeWorkspace)
+            }
+          />
+        </div>
+      ),
+    },
+    {
+      id: 'clipboard',
+      title: 'Universal Clipboard',
+      shortLabel: 'Clipboard Beam',
+      icon: <Clipboard className="w-3.5 h-3.5 text-purple-400" />,
+      component: (
+        <div className="h-full w-full overflow-hidden">
+          <ClipboardBeam
+            onBeamText={handleBeamText}
+            onFetchClipboard={handleFetchClipboard}
+            pcClipboardText={pcClipboardText}
+          />
+        </div>
+      ),
+    },
+    {
+      id: 'sprint-timer',
+      title: 'Focus Sprint Timer',
+      shortLabel: 'Sprint Timer',
+      icon: <Timer className="w-3.5 h-3.5 text-rose-400" />,
+      component: (
+        <div className="h-full w-full flex items-center justify-center p-2 sm:p-3 overflow-hidden">
+          <FlipClock isActive={rightWidgetIndex === 3} />
+        </div>
+      ),
+    },
+  ];
+
+  const presetModes = [
+    { id: 'clock', label: 'Clock', icon: <Clock className="w-3 h-3" />, left: 0, right: 0 },
+    { id: 'media', label: 'Music & Stats', icon: <Music className="w-3 h-3" />, left: 1, right: 0 },
+    { id: 'ai', label: 'AI Mission Control', icon: <Bot className="w-3 h-3" />, left: 2, right: 1 },
+    { id: 'workstation', label: 'Workstation', icon: <Zap className="w-3 h-3" />, left: 3, right: 2 },
+  ];
+
+  const isPcOnline = connected && lastSeenPc > 0 && (now - lastSeenPc < 7500);
+
   return (
-    <div className="h-screen w-screen bg-black text-[#f4f4f5] flex flex-col overflow-hidden relative font-sans antialiased select-none">
+    <div className="fixed inset-0 w-full h-[100dvh] bg-black text-[#f4f4f5] flex flex-col overflow-hidden font-sans antialiased select-none">
       {/* Invisible silent keep-awake video tag for mobile browsers */}
       <video
         ref={videoRef}
@@ -428,15 +547,26 @@ export default function App() {
       <ApprovalOverlay requests={requests} onDecision={handleDecision} />
 
       {/* Top minimal status bar */}
-      <div className="flex items-center justify-between px-5 py-2 bg-black z-30 shrink-0 border-b border-[#141418]">
-        <span className="text-[11px] font-mono text-neutral-500 font-medium tracking-wider">
-          STANDBY • {deviceId}
-        </span>
+      <div className="flex items-center justify-between px-4 sm:px-6 py-1.5 sm:py-2 bg-black z-30 shrink-0 border-b border-[#141418]">
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-mono text-neutral-500 font-medium tracking-wider">
+            STANDBY • {deviceId}
+          </span>
+        </div>
+
         <div className="flex items-center gap-3 font-mono text-[11px] tabular-nums">
           <div className="flex items-center gap-1.5">
-            <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-emerald-400' : 'bg-neutral-600'}`} />
-            <span className={connected ? 'text-neutral-300' : 'text-neutral-500'}>
-              {connected ? 'Live' : 'Offline'}
+            <span
+              className={`w-1.5 h-1.5 rounded-full transition-all ${
+                isPcOnline
+                  ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]'
+                  : connected
+                  ? 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.5)]'
+                  : 'bg-neutral-600'
+              }`}
+            />
+            <span className={isPcOnline ? 'text-neutral-200 font-medium' : 'text-neutral-500'}>
+              {isPcOnline ? 'PC Live' : connected ? 'PC Offline' : 'Offline'}
             </span>
           </div>
 
@@ -454,94 +584,47 @@ export default function App() {
         </div>
       </div>
 
-      {/* StandBy Horizontal Paginated Swipe Carousel */}
-      <main
-        ref={scrollContainerRef}
-        onScroll={handleScroll}
-        className="flex-1 flex overflow-x-auto snap-x snap-mandatory no-scrollbar h-full w-full"
-      >
-        {/* ========================================================================= */}
-        {/* SCREEN 1 (1 Big Card): Full-screen B&W Retro Split-Flap Clock             */}
-        {/* ========================================================================= */}
-        <div ref={clockContainerRef} className="w-screen h-full shrink-0 snap-center p-3 sm:p-5 flex items-center justify-center">
-          <div className="w-full max-w-4xl h-full flex items-center justify-center">
-            <FlipClock isActive={isClockVisible && activePageIndex === 0} />
+      {/* StandBy Dual Widget Stage (Fixed in Viewport - Webpage does NOT scroll) */}
+      <main className="flex-1 min-h-0 w-full p-2 sm:p-3 flex items-center justify-center overflow-hidden">
+        <div className="w-full max-w-6xl h-full min-h-0 grid grid-cols-1 md:grid-cols-2 landscape:grid-cols-2 gap-2.5 sm:gap-4 items-stretch overflow-hidden">
+          {/* Left Swipable Widget Slot */}
+          <div className="h-full min-h-0 rounded-2xl overflow-hidden border border-[#1b1b24] bg-[#070709] shadow-2xl flex flex-col">
+            <WidgetDeck
+              items={leftWidgetItems}
+              currentIndex={leftWidgetIndex}
+              onIndexChange={setLeftWidgetIndex}
+            />
           </div>
-        </div>
 
-        {/* ========================================================================= */}
-        {/* SCREEN 2 (2 Cards Half & Half): Media Controller (50%) + Telemetry (50%) */}
-        {/* ========================================================================= */}
-        <div className="w-screen h-full shrink-0 snap-center p-3 sm:p-5 flex items-center justify-center">
-          <div className="w-full max-w-6xl h-full grid grid-cols-1 md:grid-cols-2 landscape:grid-cols-2 gap-3 sm:gap-4 items-stretch">
-            {/* Left Card: Media Deck (50%) */}
-            <div className="h-full">
-              <MediaCard media={media} onAction={handleMediaAction} />
-            </div>
-
-            {/* Right Card: PC Telemetry & Model Quotas (50%) */}
-            <div className="h-full">
-              <HardwareTelemetry stats={stats} quota={quota} />
-            </div>
-          </div>
-        </div>
-
-        {/* ========================================================================= */}
-        {/* SCREEN 3 (2 Cards Half & Half): Live Antigravity Session + Prompt Commands */}
-        {/* ========================================================================= */}
-        <div className="w-screen h-full shrink-0 snap-center p-3 sm:p-5 flex items-center justify-center">
-          <div className="w-full max-w-6xl h-full grid grid-cols-1 md:grid-cols-2 landscape:grid-cols-2 gap-3 sm:gap-4 items-stretch">
-            {/* Left Card: Live Antigravity Session (50%) */}
-            <div className="h-full">
-              <AgentSessionCard
-                session={agentSession}
-                onGitPush={handleRemoteGitPush}
-                isPushing={isPushingGit}
-              />
-            </div>
-
-            {/* Right Card: Quick Chat Prompts & Commands (50%) */}
-            <div className="h-full">
-              <AgentPromptDeck onSendPrompt={handleSendAgentPrompt} />
-            </div>
-          </div>
-        </div>
-
-        {/* ========================================================================= */}
-        {/* SCREEN 4 (2 Cards Half & Half): Quick Macros (50%) + Clipboard Beam (50%) */}
-        {/* ========================================================================= */}
-        <div className="w-screen h-full shrink-0 snap-center p-3 sm:p-5 flex items-center justify-center">
-          <div className="w-full max-w-6xl h-full grid grid-cols-1 md:grid-cols-2 landscape:grid-cols-2 gap-3 sm:gap-4 items-stretch">
-            {/* Left Card: Quick Action Macros (50%) */}
-            <div className="h-full">
-              <MacroDeck onMacro={handleMacroAction} />
-            </div>
-
-            {/* Right Card: Universal Clipboard Beam (50%) */}
-            <div className="h-full">
-              <ClipboardBeam
-                onBeamText={handleBeamText}
-                onFetchClipboard={handleFetchClipboard}
-                pcClipboardText={pcClipboardText}
-              />
-            </div>
+          {/* Right Swipable Widget Slot */}
+          <div className="h-full min-h-0 rounded-2xl overflow-hidden border border-[#1b1b24] bg-[#070709] shadow-2xl flex flex-col">
+            <WidgetDeck
+              items={rightWidgetItems}
+              currentIndex={rightWidgetIndex}
+              onIndexChange={setRightWidgetIndex}
+            />
           </div>
         </div>
       </main>
 
-      {/* StandBy Pagination Dots (4 Screens) */}
-      <div className="flex items-center justify-center gap-2 py-2.5 bg-black z-30 shrink-0">
-        {[0, 1, 2, 3].map((page) => (
+      {/* StandBy Quick Mode Selector (Bottom Bar) */}
+      <div className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:py-2 bg-black z-30 shrink-0 border-t border-[#121216] overflow-x-auto no-scrollbar">
+        {presetModes.map((mode) => (
           <button
-            key={page}
-            onClick={() => scrollToPage(page)}
-            className={`h-1.5 rounded-full transition-all duration-200 ${
-              activePageIndex === page
-                ? 'w-6 bg-white'
-                : 'w-1.5 bg-[#26262e] hover:bg-[#383844]'
+            key={mode.id}
+            onClick={() => {
+              setLeftWidgetIndex(mode.left);
+              setRightWidgetIndex(mode.right);
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono transition-all duration-150 shrink-0 ${
+              leftWidgetIndex === mode.left && rightWidgetIndex === mode.right
+                ? 'bg-white text-black font-bold shadow-md shadow-white/10'
+                : 'bg-[#0f0f13] text-neutral-400 hover:text-white border border-[#202028]'
             }`}
-            title={`Screen ${page + 1}`}
-          />
+          >
+            <span>{mode.icon}</span>
+            <span>{mode.label}</span>
+          </button>
         ))}
       </div>
     </div>

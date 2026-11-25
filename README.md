@@ -112,16 +112,16 @@ npm run setup:hooks
 To turn your phone into the exclusive hardware token so you don't have to click review prompts on your monitor:
 
 1. Open **Antigravity IDE**.
-2. Go to **Settings** (or press `Ctrl+,`) and select the **Antigravity Settings** tab.
+2. Open **Settings** (or press `Ctrl+,`) and click the **Antigravity Settings** tab.
 3. Under **General** ➔ **Global Permissions**:
-   - Locate **Permission preset**.
-   - Select **Auto-Run** (or keep as **Request Review**).
-   - In **Auto-Run** mode, Antigravity delegates command execution directly to OverWatch's PreToolUse lifecycle hook.
-   - When Antigravity proposes a terminal command, your phone rings, you review the command preview, and tap **Allow** on mobile. The command runs instantly on your PC — **zero clicks needed on your desktop!**
+   - Locate the **Permission preset** dropdown.
+   - Select **Auto** (as shown in the screenshot below).
+   - In **Auto** mode, Antigravity delegates command approvals directly to OverWatch's PreToolUse lifecycle hook.
+   - When Antigravity prepares a terminal command, your phone rings with the command preview. You tap **Allow** on mobile, and the command executes immediately on your laptop — **zero clicks needed on your desktop!**
 
 <div align="center">
-  <img src="docs/screenshots/antigravity-settings.png" alt="Antigravity Settings Configuration" width="95%" />
-  <p><em>Antigravity Settings &gt; General &gt; Global Permissions &gt; Permission preset: Auto-Run</em></p>
+  <img src="docs/screenshots/antigravity-auto-preset.png" alt="Antigravity Settings - Permission Preset Auto" width="90%" />
+  <p><em>Antigravity Settings &gt; General &gt; Global Permissions &gt; Permission preset: Auto</em></p>
 </div>
 
 ### 4. Web App (PWA) Setup

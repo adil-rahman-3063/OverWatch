@@ -92,6 +92,17 @@ export class LocalIpcServer {
         res.end(JSON.stringify({ error: 'Not Found' }));
       });
 
+      this.server.on('error', (err: any) => {
+        if (err.code === 'EADDRINUSE') {
+          console.warn(`[LocalServer] Port ${config.localIpcPort} is already in use by an active OverWatch instance.`);
+          console.warn(`[LocalServer] Continuing in companion mode (sharing existing hook gateway).`);
+          resolve();
+        } else {
+          console.error('[LocalServer] Server error:', err.message);
+          resolve();
+        }
+      });
+
       this.server.listen(config.localIpcPort, '127.0.0.1', () => {
         console.log(`[LocalServer] Listening for agent hooks on http://127.0.0.1:${config.localIpcPort}`);
         resolve();
