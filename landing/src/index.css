@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body {
+    background-color: #000000;
+    color: #f4f4f5;
+    font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  code, pre, kbd {
+    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+}
+
+/* Custom dark scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #000000;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #22222a;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
+
+/* Tactile Hardware Deck Surfaces */
+.deck-panel {
+  background: #09090b;
+  border: 1px solid #1e1e24;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.deck-button {
+  background: #0e0e11;
+  border: 1px solid #23232b;
+  transition: background-color 0.1s ease, border-color 0.1s ease, transform 0.08s ease;
+}
+
+.deck-button:hover {
+  background: #16161b;
+  border-color: #363642;
+}
+
+.deck-button:active {
+  transform: scale(0.97);
+  background: #1c1c22;
+}
+
+/* Clean sideways scroll */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Split-Flap 3D Mechanical Flip Clock Animation */
+.perspective-800 {
+  perspective: 800px;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+@keyframes flap-fold-top {
+  0% {
+    transform: rotateX(0deg);
+  }
+  100% {
+    transform: rotateX(-90deg);
+  }
+}
+
+@keyframes flap-unfold-bottom {
+  0% {
+    transform: rotateX(90deg);
+  }
+  100% {
+    transform: rotateX(0deg);
+  }
+}
+
+.animate-flap-top {
+  animation: flap-fold-top 0.14s cubic-bezier(0.4, 0, 0.6, 1) forwards;
+  transform-origin: bottom center;
+}
+
+.animate-flap-bottom {
+  animation: flap-unfold-bottom 0.14s cubic-bezier(0.4, 0, 0.2, 1) 0.13s forwards;
+  transform-origin: top center;
+}

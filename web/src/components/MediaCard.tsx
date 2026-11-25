@@ -75,26 +75,28 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, onAction }) => {
   };
 
   // Touch handlers exclusively scoped to the inner track slider
-  // Uses e.stopPropagation() and touch-none so the outer card and StandBy screens NEVER scroll
+  // When multiple players exist, swipe switches players; otherwise allows page carousel swipe
   const handleSliderTouchStart = (e: React.TouchEvent) => {
-    e.stopPropagation();
-    touchStartXRef.current = e.touches[0].clientX;
-    setIsDragging(true);
-    setDragOffset(0);
+    if (totalSessions > 1) {
+      e.stopPropagation();
+      touchStartXRef.current = e.touches[0].clientX;
+      setIsDragging(true);
+      setDragOffset(0);
+    }
   };
 
   const handleSliderTouchMove = (e: React.TouchEvent) => {
-    if (touchStartXRef.current === null) return;
-    e.stopPropagation();
-    const currentX = e.touches[0].clientX;
-    const diff = currentX - touchStartXRef.current;
-    // Bound the drag offset slightly
-    setDragOffset(Math.max(-80, Math.min(80, diff)));
+    if (totalSessions > 1 && touchStartXRef.current !== null) {
+      e.stopPropagation();
+      const currentX = e.touches[0].clientX;
+      const diff = currentX - touchStartXRef.current;
+      setDragOffset(Math.max(-80, Math.min(80, diff)));
+    }
   };
 
   const handleSliderTouchEnd = (e: React.TouchEvent) => {
-    e.stopPropagation();
-    if (touchStartXRef.current !== null) {
+    if (totalSessions > 1 && touchStartXRef.current !== null) {
+      e.stopPropagation();
       const diff = e.changedTouches[0].clientX - touchStartXRef.current;
       if (Math.abs(diff) > 35) {
         if (diff > 0) {
@@ -103,10 +105,10 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, onAction }) => {
           handleNextSession();
         }
       }
+      touchStartXRef.current = null;
+      setIsDragging(false);
+      setDragOffset(0);
     }
-    touchStartXRef.current = null;
-    setIsDragging(false);
-    setDragOffset(0);
   };
 
   return (

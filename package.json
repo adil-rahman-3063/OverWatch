@@ -6,7 +6,8 @@
   "scripts": {
     "client": "npm run dev --prefix client",
     "web": "npm run dev --prefix web",
-    "build": "npm run build --prefix client && npm run build --prefix web"
+    "landing": "npm run dev --prefix landing",
+    "build": "npm run build --prefix client && npm run build --prefix web && npm run build --prefix landing"
   },
   "keywords": ["antigravity", "claude-code", "remote-control", "windows-media", "deck"],
   "author": "",

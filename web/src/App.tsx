@@ -9,8 +9,7 @@ import { AgentSessionCard } from './components/AgentSessionCard.tsx';
 import { AgentPromptDeck } from './components/AgentPromptDeck.tsx';
 import { ApprovalOverlay } from './components/ApprovalOverlay.tsx';
 import { PinLock } from './components/PinLock.tsx';
-import { WidgetDeck, WidgetItem } from './components/WidgetDeck.tsx';
-import { Lock, Clock, Music, Bot, Zap, Activity, MessageSquare, Clipboard, Timer } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { AgentSessionState, MediaState, PermissionRequest, QuotaData, SystemStats } from './types.ts';
 import { playAlertRingtone } from './utils/sound.ts';
 
@@ -30,8 +29,7 @@ export default function App() {
   const [connected, setConnected] = useState(false);
   const [lastSeenPc, setLastSeenPc] = useState<number>(0);
   const [now, setNow] = useState<number>(Date.now());
-  const [leftWidgetIndex, setLeftWidgetIndex] = useState(0);
-  const [rightWidgetIndex, setRightWidgetIndex] = useState(0);
+  const [activePageIndex, setActivePageIndex] = useState(0);
   const [activeWorkspace, setActiveWorkspace] = useState<string>('');
   const [media, setMedia] = useState<MediaState>({
     title: '',
@@ -227,10 +225,7 @@ export default function App() {
     channel.on('broadcast', { event: 'git:push_status' }, ({ payload }) => {
       setIsPushingGit(false);
       if (payload?.success) {
-        if (navigator.vibrate) navigator.vibrate([100, 50, 150]);
-        alert(payload.message || 'Pushed to GitHub successfully!');
-      } else {
-        alert('Git Push error: ' + (payload?.message || 'Check PC logs'));
+        if (navigator.vibrate) navigator.vibrate([60, 40, 80]);
       }
     });
 
@@ -360,17 +355,38 @@ export default function App() {
   const handleRemoteGitPush = async (commandOrMessage?: string, workspaceOverride?: string) => {
     setIsPushingGit(true);
     const targetWs = workspaceOverride || activeWorkspace;
+    const pushCmd = commandOrMessage && commandOrMessage.startsWith('git ')
+      ? commandOrMessage
+      : 'git push origin main';
+
+    // 1. Copy immediately to local device clipboard
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(pushCmd);
+      }
+    } catch {}
+
+    // 2. Beam directly to Windows clipboard via safe clipboard handler
     if (channelRef.current) {
+      await channelRef.current.send({
+        type: 'broadcast',
+        event: 'clipboard:set',
+        payload: { text: pushCmd },
+      });
+
       await channelRef.current.send({
         type: 'broadcast',
         event: 'agent:git_push',
         payload: {
-          command: commandOrMessage && commandOrMessage.startsWith('git ') ? commandOrMessage : undefined,
-          commitMessage: commandOrMessage && !commandOrMessage.startsWith('git ') ? commandOrMessage : 'feat: updates from OverWatch mobile deck',
+          command: pushCmd,
           workspace: targetWs,
         },
       });
     }
+
+    setTimeout(() => {
+      setIsPushingGit(false);
+    }, 1500);
   };
 
   const handleDecision = async (requestId: string, decision: 'allow' | 'deny' | 'skip') => {
@@ -409,123 +425,54 @@ export default function App() {
     );
   }
 
-  const leftWidgetItems: WidgetItem[] = [
-    {
-      id: 'clock',
-      title: 'Split-Flap Clock',
-      shortLabel: 'Retro Clock',
-      icon: <Clock className="w-3.5 h-3.5 text-amber-400" />,
-      component: (
-        <div className="h-full w-full flex items-center justify-center p-2 sm:p-3 overflow-hidden">
-          <FlipClock isActive={leftWidgetIndex === 0} />
-        </div>
-      ),
-    },
-    {
-      id: 'media',
-      title: 'Windows Media',
-      shortLabel: 'Media Player',
-      icon: <Music className="w-3.5 h-3.5 text-emerald-400" />,
-      component: (
-        <div className="h-full w-full overflow-hidden">
-          <MediaCard media={media} onAction={handleMediaAction} />
-        </div>
-      ),
-    },
-    {
-      id: 'agent-session',
-      title: 'Antigravity Session',
-      shortLabel: 'AI Session',
-      icon: <Bot className="w-3.5 h-3.5 text-cyan-400" />,
-      component: (
-        <div className="h-full w-full overflow-hidden">
-          <AgentSessionCard
-            session={agentSession}
-            onSelectSession={(sess) => {
-              if (sess?.workspace) {
-                setActiveWorkspace(sess.workspace);
-              }
-            }}
-            onGitPush={(customCmd) => handleRemoteGitPush(customCmd, activeWorkspace)}
-            isPushing={isPushingGit}
-          />
-        </div>
-      ),
-    },
-    {
-      id: 'macros',
-      title: 'Workstation Macros',
-      shortLabel: 'Quick Macros',
-      icon: <Zap className="w-3.5 h-3.5 text-yellow-400" />,
-      component: (
-        <div className="h-full w-full overflow-hidden">
-          <MacroDeck onMacro={handleMacroAction} />
-        </div>
-      ),
-    },
-  ];
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
-  const rightWidgetItems: WidgetItem[] = [
-    {
-      id: 'telemetry',
-      title: 'Hardware & Quota',
-      shortLabel: 'Telemetry & Quota',
-      icon: <Activity className="w-3.5 h-3.5 text-blue-400" />,
-      component: (
-        <div className="h-full w-full overflow-hidden">
-          <HardwareTelemetry stats={stats} quota={quota} />
-        </div>
-      ),
-    },
-    {
-      id: 'agent-prompts',
-      title: 'Prompt Commands',
-      shortLabel: 'Prompt Deck',
-      icon: <MessageSquare className="w-3.5 h-3.5 text-amber-400" />,
-      component: (
-        <div className="h-full w-full overflow-hidden">
-          <AgentPromptDeck
-            onSendPrompt={(prompt, autoSend) =>
-              handleSendAgentPrompt(prompt, autoSend, activeWorkspace)
-            }
-          />
-        </div>
-      ),
-    },
-    {
-      id: 'clipboard',
-      title: 'Universal Clipboard',
-      shortLabel: 'Clipboard Beam',
-      icon: <Clipboard className="w-3.5 h-3.5 text-purple-400" />,
-      component: (
-        <div className="h-full w-full overflow-hidden">
-          <ClipboardBeam
-            onBeamText={handleBeamText}
-            onFetchClipboard={handleFetchClipboard}
-            pcClipboardText={pcClipboardText}
-          />
-        </div>
-      ),
-    },
-    {
-      id: 'sprint-timer',
-      title: 'Focus Sprint Timer',
-      shortLabel: 'Sprint Timer',
-      icon: <Timer className="w-3.5 h-3.5 text-rose-400" />,
-      component: (
-        <div className="h-full w-full flex items-center justify-center p-2 sm:p-3 overflow-hidden">
-          <FlipClock isActive={rightWidgetIndex === 3} />
-        </div>
-      ),
-    },
-  ];
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartRef.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+    };
+  };
 
-  const presetModes = [
-    { id: 'clock', label: 'Clock', icon: <Clock className="w-3 h-3" />, left: 0, right: 0 },
-    { id: 'media', label: 'Music & Stats', icon: <Music className="w-3 h-3" />, left: 1, right: 0 },
-    { id: 'ai', label: 'AI Mission Control', icon: <Bot className="w-3 h-3" />, left: 2, right: 1 },
-    { id: 'workstation', label: 'Workstation', icon: <Zap className="w-3 h-3" />, left: 3, right: 2 },
-  ];
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStartRef.current) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartRef.current.x;
+    const deltaY = e.changedTouches[0].clientY - touchStartRef.current.y;
+    touchStartRef.current = null;
+
+    if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) {
+      if (deltaX < 0) {
+        // Swipe left -> Next page
+        setActivePageIndex((prev) => {
+          const next = Math.min(3, prev + 1);
+          if (next !== prev && navigator.vibrate) navigator.vibrate(20);
+          return next;
+        });
+      } else {
+        // Swipe right -> Previous page
+        setActivePageIndex((prev) => {
+          const next = Math.max(0, prev - 1);
+          if (next !== prev && navigator.vibrate) navigator.vibrate(20);
+          return next;
+        });
+      }
+    }
+  };
+
+  // Keyboard navigation for desktop testing
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') {
+        setActivePageIndex((p) => Math.min(3, p + 1));
+      } else if (e.key === 'ArrowLeft') {
+        setActivePageIndex((p) => Math.max(0, p - 1));
+      } else if (['1', '2', '3', '4'].includes(e.key)) {
+        setActivePageIndex(parseInt(e.key) - 1);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const isPcOnline = connected && lastSeenPc > 0 && (now - lastSeenPc < 7500);
 
@@ -584,48 +531,103 @@ export default function App() {
         </div>
       </div>
 
-      {/* StandBy Dual Widget Stage (Fixed in Viewport - Webpage does NOT scroll) */}
-      <main className="flex-1 min-h-0 w-full p-2 sm:p-3 flex items-center justify-center overflow-hidden">
-        <div className="w-full max-w-6xl h-full min-h-0 grid grid-cols-1 md:grid-cols-2 landscape:grid-cols-2 gap-2.5 sm:gap-4 items-stretch overflow-hidden">
-          {/* Left Swipable Widget Slot */}
-          <div className="h-full min-h-0 rounded-2xl overflow-hidden border border-[#1b1b24] bg-[#070709] shadow-2xl flex flex-col">
-            <WidgetDeck
-              items={leftWidgetItems}
-              currentIndex={leftWidgetIndex}
-              onIndexChange={setLeftWidgetIndex}
-            />
+      {/* StandBy 4-Page Sliding Stage (Fixed in Viewport - Webpage does NOT scroll) */}
+      <main
+        className="flex-1 min-h-0 w-full relative overflow-hidden"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
+        <div
+          className="flex h-full w-full transition-transform duration-300 ease-out"
+          style={{ transform: `translateX(-${activePageIndex * 100}%)` }}
+        >
+          {/* ========================================================================= */}
+          {/* PAGE 1: Retro Split-Flap Clock                                            */}
+          {/* ========================================================================= */}
+          <div className="w-full h-full shrink-0 flex items-center justify-center p-2 sm:p-4 overflow-hidden">
+            <div className="w-full max-w-4xl h-full flex items-center justify-center">
+              <FlipClock isActive={activePageIndex === 0} />
+            </div>
           </div>
 
-          {/* Right Swipable Widget Slot */}
-          <div className="h-full min-h-0 rounded-2xl overflow-hidden border border-[#1b1b24] bg-[#070709] shadow-2xl flex flex-col">
-            <WidgetDeck
-              items={rightWidgetItems}
-              currentIndex={rightWidgetIndex}
-              onIndexChange={setRightWidgetIndex}
-            />
+          {/* ========================================================================= */}
+          {/* PAGE 2: AI Sessions & Prompt Deck (Swipable UP/DOWN for command inspection)*/}
+          {/* ========================================================================= */}
+          <div className="w-full h-full shrink-0 flex items-center justify-center p-2 sm:p-4 overflow-hidden">
+            <div className="w-full max-w-6xl h-full min-h-0 grid grid-cols-1 md:grid-cols-2 landscape:grid-cols-2 gap-2.5 sm:gap-4 items-stretch overflow-hidden">
+              <div className="h-full min-h-0 overflow-hidden">
+                <AgentSessionCard
+                  session={agentSession}
+                  onSelectSession={(sess) => {
+                    if (sess?.workspace) setActiveWorkspace(sess.workspace);
+                  }}
+                  onGitPush={(customCmd) => handleRemoteGitPush(customCmd, activeWorkspace)}
+                  isPushing={isPushingGit}
+                />
+              </div>
+              <div className="h-full min-h-0 overflow-hidden">
+                <AgentPromptDeck
+                  onSendPrompt={(prompt, autoSend) =>
+                    handleSendAgentPrompt(prompt, autoSend, activeWorkspace)
+                  }
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* ========================================================================= */}
+          {/* PAGE 3: Media Deck (50%) + PC Telemetry & Quota (50%)                     */}
+          {/* ========================================================================= */}
+          <div className="w-full h-full shrink-0 flex items-center justify-center p-2 sm:p-4 overflow-hidden">
+            <div className="w-full max-w-6xl h-full min-h-0 grid grid-cols-1 md:grid-cols-2 landscape:grid-cols-2 gap-2.5 sm:gap-4 items-stretch overflow-hidden">
+              <div className="h-full min-h-0 overflow-hidden">
+                <MediaCard media={media} onAction={handleMediaAction} />
+              </div>
+              <div className="h-full min-h-0 overflow-hidden">
+                <HardwareTelemetry stats={stats} quota={quota} />
+              </div>
+            </div>
+          </div>
+
+          {/* ========================================================================= */}
+          {/* PAGE 4: Workstation Macros (50%) + Clipboard Beam (50%)                   */}
+          {/* ========================================================================= */}
+          <div className="w-full h-full shrink-0 flex items-center justify-center p-2 sm:p-4 overflow-hidden">
+            <div className="w-full max-w-6xl h-full min-h-0 grid grid-cols-1 md:grid-cols-2 landscape:grid-cols-2 gap-2.5 sm:gap-4 items-stretch overflow-hidden">
+              <div className="h-full min-h-0 overflow-hidden">
+                <MacroDeck onMacro={handleMacroAction} />
+              </div>
+              <div className="h-full min-h-0 overflow-hidden">
+                <ClipboardBeam
+                  onBeamText={handleBeamText}
+                  onFetchClipboard={handleFetchClipboard}
+                  pcClipboardText={pcClipboardText}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </main>
 
-      {/* StandBy Quick Mode Selector (Bottom Bar) */}
-      <div className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:py-2 bg-black z-30 shrink-0 border-t border-[#121216] overflow-x-auto no-scrollbar">
-        {presetModes.map((mode) => (
-          <button
-            key={mode.id}
-            onClick={() => {
-              setLeftWidgetIndex(mode.left);
-              setRightWidgetIndex(mode.right);
-            }}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono transition-all duration-150 shrink-0 ${
-              leftWidgetIndex === mode.left && rightWidgetIndex === mode.right
-                ? 'bg-white text-black font-bold shadow-md shadow-white/10'
-                : 'bg-[#0f0f13] text-neutral-400 hover:text-white border border-[#202028]'
-            }`}
-          >
-            <span>{mode.icon}</span>
-            <span>{mode.label}</span>
-          </button>
-        ))}
+      {/* Minimalist StandBy Indicator Dots (Zero clutter, maximum viewport height) */}
+      <div className="absolute bottom-2.5 inset-x-0 flex items-center justify-center gap-2 z-30 pointer-events-auto">
+        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-black/70 backdrop-blur-md border border-[#1c1c26]">
+          {[0, 1, 2, 3].map((idx) => (
+            <button
+              key={idx}
+              onClick={() => {
+                setActivePageIndex(idx);
+                if (navigator.vibrate) navigator.vibrate(15);
+              }}
+              className={`transition-all duration-200 rounded-full ${
+                activePageIndex === idx
+                  ? 'w-4 h-1.5 bg-white shadow-[0_0_8px_rgba(255,255,255,0.7)]'
+                  : 'w-1.5 h-1.5 bg-neutral-700 hover:bg-neutral-400'
+              }`}
+              title={idx === 0 ? 'Clock' : idx === 1 ? 'AI Mission' : idx === 2 ? 'Music & Stats' : 'Workstation'}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

@@ -66,7 +66,36 @@ export class AntigravityQuotaCollector {
       const { stdout } = await execPromise(command, { timeout: 15000 });
       const parsed = JSON.parse(stdout.trim());
       
-      const groups: QuotaGroup[] = parsed?.command?.data?.groups || [];
+      const rawGroups: QuotaGroup[] = parsed?.command?.data?.groups || [];
+      const now = Date.now();
+
+      // Ensure every bucket has an accurate reset_time
+      const groups = rawGroups.map((g) => ({
+        ...g,
+        buckets: (g.buckets || []).map((b) => {
+          let resetTime = b.reset_time;
+          if (!resetTime) {
+            const lowerName = (b.name || '').toLowerCase();
+            const lowerWin = (b.window || '').toLowerCase();
+
+            if (lowerName.includes('five') || lowerWin.includes('5h') || lowerName.includes('5 hour')) {
+              const fiveHoursMs = 5 * 3600 * 1000;
+              const remainingMs = fiveHoursMs - (now % fiveHoursMs);
+              resetTime = new Date(now + remainingMs).toISOString();
+            } else if (lowerName.includes('week') || lowerWin.includes('week')) {
+              const date = new Date(now);
+              const day = date.getUTCDay();
+              const daysLeft = (7 - day) % 7 || 7;
+              resetTime = new Date(now + daysLeft * 24 * 3600 * 1000).toISOString();
+            }
+          }
+          return {
+            ...b,
+            reset_time: resetTime || '',
+          };
+        }),
+      }));
+
       return {
         groups,
         rawText: parsed?.response || '',

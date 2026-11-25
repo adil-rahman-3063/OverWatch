@@ -283,3 +283,37 @@ Startup Autostart     Companion Port Handshake                            Univer
 All running quietly from the Windows System Tray, completely open source with zero hardcoded credentials.
 
 Onward. 🛠️
+
+---
+
+## Log Entry: StandBy Minimalist Evolution & The Public Landing Simulator
+**Date:** November 25, 2026 — 23:05 IST  
+**Topic:** Gesture Scoping, Token Countdown Telemetry, and the 1:1 Live Simulator
+
+As OverWatch matured into a daily desk driver, we conducted an intensive round of ergonomic refinements and launched the public landing experience:
+
+### 1. Minimalist Indicator Dots — Reclaiming the Viewport
+In landscape mode on smartphones, vertical screen real estate is precious. The previous bottom bar with large labeled buttons (`Clock`, `Music & Stats`, etc.) took up ~15% of the screen. We removed the buttons completely and restored the minimalist floating indicator pill (`[●] [○] [○] [○]`). Now, 100% of the screen is dedicated to data and tactile controls, with subtle glowing dots providing position feedback.
+
+### 2. Multi-Dimensional Gesture Scoping Architecture
+With multi-session agent tracking, terminal command inspection, and 4 StandBy pages all sharing a touchscreen, gestures initially conflicted. We implemented a clean multi-dimensional gesture architecture:
+- **Horizontal Path Box Swipe**: Swiping left/right *only* on the File Path Box (`FolderGit2`) switches active project sessions (`OverWatch` ⇄ `Portfolio`). Event propagation is stopped (`e.stopPropagation()`), preventing page slides.
+- **Vertical Card Swipe**: Swiping up/down on the card body toggles between **Overview (0)**, **Running Command (1)**, and **Activity Logs (2)**.
+- **Auto-Flip on Execution**: When an agent begins executing a command, the card automatically flips to the Running Command inspector view.
+- **Outer Stage Horizontal Swipe**: Swipes across the rest of the display slide smoothly across the 4 StandBy pages (`translateX(-${activePageIndex * 100}%)`).
+
+### 3. Model Token Next Reset Time Countdown
+Antigravity token quotas (Gemini 2.5 Flash and Pro) reset on rolling 5-hour and weekly windows. A simple percentage without reset timing leaves developers guessing. We enriched `antigravityQuota.ts` and `HardwareTelemetry.tsx` to calculate and render live countdown timers (`2h 15m`, `4d 18h`) right next to percentage gauges with clock icons.
+
+### 4. Safe Push Beaming & Zero-Alert Policy
+Attempting to run `git push` directly in background PowerShell shells led to command-line quoting issues on commit messages containing spaces or backticks, resulting in browser `alert()` popups. We established a strict **Zero-Alert Policy**:
+- Removed all browser `alert()` dialogs.
+- `handleRemoteGitPush` beams the command directly to the local device clipboard and to the Windows clipboard via `clipboard:set`.
+- The developer safely pastes (`Ctrl+V`) and enters on their PC terminal with zero accidental commits.
+
+### 5. OverWatch Public Landing & Live Deck Simulator (`overwatch.adilrahman.cc`)
+We engineered a public showcase landing page (`landing/`) deployed at `https://overwatch.adilrahman.cc`:
+- **1:1 Live Deck Simulator**: Ported the exact `web` deck components into `landing/src/components/deck/` so visitors can interact with a live, tactile simulator featuring all 4 screens, mechanical flip audio, multi-session switching, and an interactive Gatekeeper interlock test.
+- **Any Screen Ratio & Mobile-First**: Built fluid container scaling so the deck fits comfortably on mobile phones (portrait and landscape), tablets, and ultrawide monitors.
+- **Crawlable HTML5 Endpoints & SEO**: Dedicated paths (`/`, `/architecture`, `/changelog`, `/docs`, `/showcase`, `/developer`) with XML sitemap, `robots.txt`, OpenGraph, and JSON-LD structured schema.
+- **Creator Attribution**: Dedicated `/developer` endpoint detailing Adil Rahman (`@AdilR`) and linking to `https://adilrahman.cc?utm_source=overwatch`.
