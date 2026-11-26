@@ -228,9 +228,23 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
       ? currentSession.recentActions[0].detail
       : '');
 
+  const cachedName = typeof window !== 'undefined' ? localStorage.getItem('overwatch_last_workspace_name') : null;
+  const cachedPath = typeof window !== 'undefined' ? localStorage.getItem('overwatch_last_workspace_path') : null;
+
+  const displayWorkspaceName = 
+    currentSession?.workspaceName || 
+    (currentSession?.workspace ? currentSession.workspace.split(/[/\\]/).pop() : null) || 
+    cachedName || 
+    'OverWatch';
+
+  const displayWorkspacePath = 
+    currentSession?.workspace || 
+    cachedPath || 
+    'c:\\Users\\adilr\\Documents\\open-source\\OverWatch';
+
   return (
     <div 
-      className="bg-[#08080a] border border-[#181822] rounded-2xl p-3 sm:p-4 flex flex-col justify-between h-full shadow-2xl relative overflow-hidden select-none"
+      className="bg-[#08080a] border border-[#181822] rounded-2xl p-2.5 sm:p-4 flex flex-col justify-between h-full shadow-2xl relative overflow-hidden select-none"
       onTouchStart={handleCardTouchStart}
       onTouchEnd={handleCardTouchEnd}
     >
@@ -243,18 +257,23 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
       )}
 
       {/* Top Header - Pinned at top */}
-      <div className="shrink-0 pb-2 border-b border-[#14141c]">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-[#111118] border border-[#22222e] text-cyan-400">
-              <Bot className="w-4 h-4" />
+      <div className="shrink-0 pb-1.5 sm:pb-2 border-b border-[#14141c]">
+        <div className="flex items-center justify-between gap-1.5">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <div className="p-1 rounded-lg bg-[#111118] border border-[#22222e] text-cyan-400 shrink-0">
+              <Bot className="w-3.5 h-3.5" />
             </div>
-            <div>
-              <h2 className="text-xs font-mono font-bold text-white tracking-wider uppercase flex items-center gap-1.5">
-                <span>Antigravity</span>
-                <span className="text-[10px] text-neutral-500 font-normal">SESSION</span>
-              </h2>
-              <div className="flex items-center gap-1.5 text-[10px] font-mono text-neutral-400">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-mono font-bold text-white tracking-wider uppercase">
+                  Antigravity
+                </span>
+                <span className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full border text-[8px] font-mono font-medium ${statusColor}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${dotColor} ${isRunning || isAwaiting ? 'animate-ping' : ''}`} />
+                  <span>{statusLabel}</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-1 text-[9px] font-mono text-neutral-400 truncate">
                 <span>{formatModel(currentSession?.model)}</span>
                 {currentSession?.stepCount ? (
                   <>
@@ -266,49 +285,36 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Vertical View Navigator Pills */}
-            <div className="flex items-center gap-1 bg-[#101015] p-0.5 rounded-lg border border-[#1e1e28]">
-              <button
-                onClick={() => setViewIndex(0)}
-                className={`px-1.5 py-0.5 rounded text-[9px] font-mono transition-all ${
-                  viewIndex === 0 ? 'bg-white text-black font-bold' : 'text-neutral-500 hover:text-white'
-                }`}
-                title="Mission Overview"
-              >
-                Overview
-              </button>
-              <button
-                onClick={() => setViewIndex(1)}
-                className={`px-1.5 py-0.5 rounded text-[9px] font-mono transition-all flex items-center gap-1 ${
-                  viewIndex === 1 ? 'bg-cyan-400 text-black font-bold' : 'text-neutral-500 hover:text-white'
-                }`}
-                title="Running Command"
-              >
-                {isRunning && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />}
-                Command
-              </button>
-              <button
-                onClick={() => setViewIndex(2)}
-                className={`px-1.5 py-0.5 rounded text-[9px] font-mono transition-all ${
-                  viewIndex === 2 ? 'bg-white text-black font-bold' : 'text-neutral-500 hover:text-white'
-                }`}
-                title="Activity Logs"
-              >
-                Logs
-              </button>
-            </div>
-
-            {/* Live Status Pill */}
-            <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[9px] font-mono font-medium ${statusColor}`}>
-              <span className="relative flex h-2 w-2">
-                {(isRunning || isAwaiting) && (
-                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${dotColor}`} />
-                )}
-                <span className={`relative inline-flex rounded-full h-2 w-2 ${dotColor}`} />
-              </span>
-              <span>{statusLabel}</span>
-            </div>
+          {/* Vertical View Navigator Pills */}
+          <div className="flex items-center gap-0.5 bg-[#101015] p-0.5 rounded-lg border border-[#1e1e28] shrink-0">
+            <button
+              onClick={() => setViewIndex(0)}
+              className={`px-1.5 py-0.5 rounded text-[8.5px] font-mono transition-all ${
+                viewIndex === 0 ? 'bg-white text-black font-bold' : 'text-neutral-400 hover:text-white'
+              }`}
+              title="Mission Overview"
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setViewIndex(1)}
+              className={`px-1.5 py-0.5 rounded text-[8.5px] font-mono transition-all flex items-center gap-0.5 ${
+                viewIndex === 1 ? 'bg-cyan-400 text-black font-bold' : 'text-neutral-400 hover:text-white'
+              }`}
+              title="Running Command"
+            >
+              {isRunning && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />}
+              Command
+            </button>
+            <button
+              onClick={() => setViewIndex(2)}
+              className={`px-1.5 py-0.5 rounded text-[8.5px] font-mono transition-all ${
+                viewIndex === 2 ? 'bg-white text-black font-bold' : 'text-neutral-400 hover:text-white'
+              }`}
+              title="Activity Logs"
+            >
+              Logs
+            </button>
           </div>
         </div>
       </div>
@@ -319,14 +325,14 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
         {/* VIEW 0: MISSION OVERVIEW & SWIPABLE FILE PATH BOX                         */}
         {/* ========================================================================= */}
         {viewIndex === 0 && (
-          <div className="h-full flex flex-col justify-between space-y-2 animate-in fade-in duration-150">
+          <div className="h-full flex flex-col justify-start gap-1.5 sm:gap-2 animate-in fade-in duration-150 overflow-y-auto no-scrollbar">
             {/* WORKSPACE FILE PATH BOX (Strictly Swipable Left & Right for Multiple Sessions) */}
             <div 
               onTouchStart={handlePathTouchStart}
               onTouchMove={handlePathTouchMove}
               onTouchEnd={handlePathTouchEnd}
               style={{ transform: `translateX(${pathDragOffset}px)` }}
-              className={`p-2.5 rounded-xl bg-[#0a0a0f] border transition-transform duration-75 relative overflow-hidden cursor-grab active:cursor-grabbing ${
+              className={`shrink-0 p-2 sm:p-2.5 rounded-xl bg-[#0a0a0f] border transition-transform duration-75 relative overflow-hidden cursor-grab active:cursor-grabbing ${
                 totalSessions > 1 
                   ? 'border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.08)] ring-1 ring-cyan-500/20' 
                   : 'border-[#1c1c28]'
@@ -338,34 +344,34 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                     <FolderGit2 className="w-4 h-4" />
                   </div>
                   <div className="overflow-hidden flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-mono font-bold text-white uppercase tracking-wider truncate">
-                        {currentSession?.workspaceName || currentSession?.workspace?.split(/\\|\//).pop() || 'Workspace'}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] sm:text-xs font-mono font-bold text-white uppercase tracking-wider truncate">
+                        {displayWorkspaceName}
                       </span>
                       {totalSessions > 1 && (
-                        <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold shrink-0 animate-pulse">
-                          Session {selectedIdx + 1} of {totalSessions}
+                        <span className="text-[8.5px] font-mono px-1.5 py-0.2 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold shrink-0">
+                          {selectedIdx + 1}/{totalSessions}
                         </span>
                       )}
                     </div>
-                    <p className="text-[9px] font-mono text-neutral-400 truncate mt-0.5" title={currentSession?.workspace}>
-                      {currentSession?.workspace || 'Active Project Directory'}
+                    <p className="text-[9px] font-mono text-neutral-400 truncate mt-0.5" title={displayWorkspacePath}>
+                      {displayWorkspacePath}
                     </p>
                   </div>
                 </div>
 
                 {/* Left/Right Switch Controls for Multiple Sessions */}
                 {totalSessions > 1 && (
-                  <div className="flex items-center gap-1 bg-[#12121a] p-1 rounded-lg border border-neutral-800 shrink-0 ml-2">
+                  <div className="flex items-center gap-1 bg-[#12121a] p-0.5 rounded-lg border border-neutral-800 shrink-0 ml-1.5">
                     <button
                       onClick={handlePrevSession}
                       disabled={selectedIdx === 0}
                       className="p-1 rounded hover:bg-neutral-800 disabled:opacity-25 text-neutral-300 active:scale-95 transition-all"
                       title="Previous workspace session"
                     >
-                      <ChevronLeft className="w-3.5 h-3.5" />
+                      <ChevronLeft className="w-3 h-3" />
                     </button>
-                    <span className="text-[9px] font-mono text-neutral-500 px-1">
+                    <span className="text-[8.5px] font-mono text-neutral-500 px-0.5">
                       {selectedIdx + 1}/{totalSessions}
                     </span>
                     <button
@@ -374,7 +380,7 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                       className="p-1 rounded hover:bg-neutral-800 disabled:opacity-25 text-neutral-300 active:scale-95 transition-all"
                       title="Next workspace session"
                     >
-                      <ChevronRight className="w-3.5 h-3.5" />
+                      <ChevronRight className="w-3 h-3" />
                     </button>
                   </div>
                 )}
@@ -382,7 +388,7 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
 
               {/* Swipe Cue Banner if multiple sessions */}
               {totalSessions > 1 && (
-                <div className="mt-2 pt-1.5 border-t border-[#161622] flex items-center justify-between text-[8px] font-mono text-cyan-400/80">
+                <div className="mt-1.5 pt-1 border-t border-[#161622] flex items-center justify-between text-[8px] font-mono text-cyan-400/80">
                   <span className="flex items-center gap-1">
                     <ChevronLeft className="w-2.5 h-2.5 animate-pulse" />
                     Swipe box left/right to switch active session
@@ -394,12 +400,12 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
             </div>
 
             {/* Current Objective */}
-            <div className="p-2.5 rounded-xl bg-[#0d0d12] border border-[#1a1a24] text-left">
-              <div className="flex items-center gap-1 text-[10px] font-mono text-neutral-500 mb-0.5">
+            <div className="shrink-0 p-2 sm:p-2.5 rounded-xl bg-[#0d0d12] border border-[#1a1a24] text-left">
+              <div className="flex items-center gap-1 text-[9.5px] font-mono text-neutral-500 mb-0.5">
                 <Sparkles className="w-3 h-3 text-amber-400" />
                 <span>CURRENT OBJECTIVE</span>
               </div>
-              <p className="text-xs text-neutral-200 line-clamp-2 font-sans font-medium leading-relaxed">
+              <p className="text-[11px] text-neutral-200 line-clamp-2 font-sans font-medium leading-relaxed">
                 {currentSession?.currentTask || 'Idle — waiting for next instruction.'}
               </p>
             </div>
@@ -407,32 +413,24 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
             {/* Running Command Teaser (Tap or Swipe Up) */}
             <div 
               onClick={() => setViewIndex(1)}
-              className="p-2.5 rounded-xl bg-[#05070a] border border-cyan-900/40 hover:border-cyan-500/50 cursor-pointer transition-all flex items-center justify-between"
+              className="shrink-0 p-2 sm:p-2.5 rounded-xl bg-[#05070a] border border-cyan-900/40 hover:border-cyan-500/50 cursor-pointer transition-all flex items-center justify-between"
             >
               <div className="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
                 <Terminal className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                 <div className="overflow-hidden truncate">
-                  <span className="text-[10px] text-cyan-400 font-bold block">
+                  <span className="text-[9.5px] text-cyan-400 font-bold block">
                     {isRunning ? 'ACTIVE RUNNING COMMAND' : 'LATEST COMMAND'}
                   </span>
-                  <span className="text-[10px] text-neutral-300 truncate font-mono block">
+                  <span className="text-[9.5px] text-neutral-300 truncate font-mono block">
                     {activeCommandStr || 'No active terminal command'}
                   </span>
                 </div>
               </div>
-              <span className="text-[9px] font-mono text-neutral-500 px-2 py-0.5 rounded bg-[#0d0d14] border border-[#202028] shrink-0 ml-2">
-                Swipe ↑
+              <span className="text-[8.5px] font-mono text-neutral-500 px-1.5 py-0.5 rounded bg-[#0d0d14] border border-[#202028] shrink-0 ml-1.5 flex items-center gap-0.5">
+                <span>View</span>
+                <ChevronUp className="w-2.5 h-2.5" />
               </span>
             </div>
-
-            {/* Swipe Up Navigation Prompt */}
-            <button
-              onClick={() => setViewIndex(1)}
-              className="w-full py-1.5 rounded-lg bg-[#0e0e14] border border-[#20202c] text-neutral-400 hover:text-white text-[10px] font-mono flex items-center justify-center gap-1.5 transition-colors shadow-sm"
-            >
-              <span>Swipe ↑ up to inspect running command</span>
-              <ChevronDown className="w-3 h-3 text-cyan-400 rotate-180 animate-bounce" />
-            </button>
           </div>
         )}
 
@@ -589,7 +587,7 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
         <div className="flex items-center gap-1.5 truncate max-w-[180px]">
           <span className="text-neutral-400">Target:</span>
           <span className="text-white truncate font-bold font-mono">
-            {currentSession?.workspaceName || 'OverWatch'}
+            {displayWorkspaceName}
           </span>
         </div>
         {currentSession?.cacheTokens ? (

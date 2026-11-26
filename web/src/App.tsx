@@ -30,7 +30,9 @@ export default function App() {
   const [lastSeenPc, setLastSeenPc] = useState<number>(0);
   const [now, setNow] = useState<number>(Date.now());
   const [activePageIndex, setActivePageIndex] = useState(0);
-  const [activeWorkspace, setActiveWorkspace] = useState<string>('');
+  const [activeWorkspace, setActiveWorkspace] = useState<string>(() => {
+    return localStorage.getItem('overwatch_last_workspace_path') || 'c:\\Users\\adilr\\Documents\\open-source\\OverWatch';
+  });
   const [media, setMedia] = useState<MediaState>({
     title: '',
     artist: '',
@@ -38,7 +40,24 @@ export default function App() {
     playbackStatus: 'Stopped',
   });
   const [stats, setStats] = useState<SystemStats | undefined>();
-  const [agentSession, setAgentSession] = useState<AgentSessionState | null>(null);
+  const [agentSession, setAgentSession] = useState<AgentSessionState | null>(() => {
+    try {
+      const cached = localStorage.getItem('overwatch_cached_session');
+      if (cached) return JSON.parse(cached);
+    } catch {}
+    return {
+      agent: 'Antigravity',
+      conversationId: '',
+      status: 'idle',
+      model: 'gemini-flash',
+      stepCount: 0,
+      currentTask: 'Idle — waiting for next instruction.',
+      workspace: 'c:\\Users\\adilr\\Documents\\open-source\\OverWatch',
+      workspaceName: 'OverWatch',
+      lastActive: new Date().toISOString(),
+      recentActions: [],
+    };
+  });
   const [isPushingGit, setIsPushingGit] = useState(false);
   const [requests, setRequests] = useState<PermissionRequest[]>([]);
   const [quota, setQuota] = useState<QuotaData>({});
@@ -216,6 +235,15 @@ export default function App() {
       setLastSeenPc(Date.now());
       if (payload?.session) {
         setAgentSession(payload.session);
+        try {
+          localStorage.setItem('overwatch_cached_session', JSON.stringify(payload.session));
+          if (payload.session.workspace) {
+            localStorage.setItem('overwatch_last_workspace_path', payload.session.workspace);
+          }
+          if (payload.session.workspaceName) {
+            localStorage.setItem('overwatch_last_workspace_name', payload.session.workspaceName);
+          }
+        } catch {}
         if (payload.session.workspace) {
           setActiveWorkspace((prev) => prev || payload.session.workspace);
         }

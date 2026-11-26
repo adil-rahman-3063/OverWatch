@@ -142,11 +142,11 @@ export class AgentSessionMonitor {
       const actionsFromLog: AgentSessionAction[] = [];
 
       // Check early lines for workspace definition
-      for (const line of lines.slice(0, 15)) {
+      for (const line of lines.slice(0, 25)) {
         if (!discoveredWorkspace) {
-          const wsMatch = line.match(/(?:Command Working Directory|Active Workspaces:[\s\S]*?-)\s*([a-zA-Z]:\\[^\r\n"\\,]+)/i);
+          const wsMatch = line.match(/(?:Command Working Directory|Active Workspaces:[\s\S]*?-)\s*([a-zA-Z]:[\\/][^\r\n"<>,|]+)/i);
           if (wsMatch) {
-            discoveredWorkspace = wsMatch[1].trim();
+            discoveredWorkspace = wsMatch[1].trim().replace(/[\\/]+$/, '');
           }
         }
       }
@@ -212,7 +212,10 @@ export class AgentSessionMonitor {
 
       const isCurrentHook = this.lastHookAction?.conversationId === conv.id;
       const activeWorkspace = discoveredWorkspace || (isCurrentHook ? this.lastHookAction?.cwd : null) || process.cwd();
-      const workspaceName = path.basename(activeWorkspace) || 'Workspace';
+      const baseName = path.basename(activeWorkspace);
+      const workspaceName = (baseName && baseName !== path.parse(activeWorkspace).root && baseName.toLowerCase() !== 'workspace')
+        ? baseName
+        : 'OverWatch';
 
       const timeSinceAction = Date.now() - Math.max(lastEntryTime, isCurrentHook ? this.lastHookAction?.timestamp || 0 : 0);
 

@@ -1,5 +1,9 @@
 #!/usr/bin/env node
 
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+
 /**
  * Antigravity PreToolUse Hook
  * Invoked by Antigravity whenever a tool (e.g. run_command) is called.
@@ -27,6 +31,21 @@ async function readStdin(): Promise<string> {
 }
 
 async function main() {
+  // 0. Transparent pass-through if OverWatch gate is uninstalled or disabled in hooks.json
+  try {
+    const configHooksPath = path.join(os.homedir(), '.gemini', 'config', 'hooks.json');
+    const disabledFlag = path.join(__dirname, '..', '..', '.disabled');
+    if (fs.existsSync(disabledFlag)) {
+      process.exit(0);
+    }
+    if (fs.existsSync(configHooksPath)) {
+      const config = JSON.parse(fs.readFileSync(configHooksPath, 'utf8'));
+      if (!config['overwatch-gate'] || config['overwatch-gate'].enabled === false) {
+        process.exit(0);
+      }
+    }
+  } catch {}
+
   let hookInput: HookInput = {};
 
   try {
