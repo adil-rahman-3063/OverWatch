@@ -1,5 +1,6 @@
 import React from 'react';
 import { Shield, Lock, EyeOff, Server, HardDrive, Smartphone, FileText, ArrowLeft } from 'lucide-react';
+import { AdsterraBanner } from '../components/AdsterraBanner.tsx';
 
 interface PrivacyPageProps {
   onTabChange?: (tab: string) => void;
@@ -172,6 +173,9 @@ export const PrivacyPage: React.FC<PrivacyPageProps> = ({ onTabChange }) => {
           </p>
         </section>
       </div>
+
+      {/* Adsterra Sponsored Banner */}
+      <AdsterraBanner />
     </div>
   );
 };

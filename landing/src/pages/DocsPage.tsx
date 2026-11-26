@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Terminal, Copy, Check, ExternalLink, Settings, ShieldAlert, Monitor, Smartphone, HelpCircle } from 'lucide-react';
+import { AdsterraBanner } from '../components/AdsterraBanner.tsx';
 
 export const DocsPage: React.FC = () => {
   const [copiedCmd, setCopiedCmd] = useState<string | null>(null);
@@ -166,6 +167,9 @@ export const DocsPage: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* Adsterra Sponsored Banner */}
+      <AdsterraBanner />
     </div>
   );
 };

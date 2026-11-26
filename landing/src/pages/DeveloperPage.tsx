@@ -1,5 +1,6 @@
 import React from 'react';
 import { ExternalLink, Terminal, ShieldCheck, Code2, Globe, Cpu, Sparkles } from 'lucide-react';
+import { AdsterraBanner } from '../components/AdsterraBanner.tsx';
 
 const GithubIcon = ({ className = 'w-4 h-4' }: { className?: string }) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -180,6 +181,9 @@ export const DeveloperPage: React.FC = () => {
           </a>
         </div>
       </section>
+
+      {/* Adsterra Sponsored Banner */}
+      <AdsterraBanner />
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Smartphone, Monitor, BatteryCharging, Volume2, Sparkles, Sliders, ArrowUpRight } from 'lucide-react';
+import { AdsterraBanner } from '../components/AdsterraBanner.tsx';
 
 export const ShowcasePage: React.FC = () => {
   return (
@@ -161,6 +162,9 @@ export const ShowcasePage: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* Adsterra Sponsored Banner */}
+      <AdsterraBanner />
     </div>
   );
 };

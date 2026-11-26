@@ -1,5 +1,6 @@
 import React from 'react';
 import { GitCommit, Tag, CheckCircle2, ShieldCheck, Sparkles, AlertCircle } from 'lucide-react';
+import { AdsterraBanner } from '../components/AdsterraBanner.tsx';
 
 export const ChangelogPage: React.FC = () => {
   const releases = [
@@ -157,6 +158,9 @@ export const ChangelogPage: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {/* Adsterra Sponsored Banner */}
+      <AdsterraBanner />
     </div>
   );
 };

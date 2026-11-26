@@ -1,5 +1,6 @@
 import React from 'react';
 import { Scale, CheckCircle2, AlertTriangle, ShieldCheck, Terminal, Cpu, ArrowLeft } from 'lucide-react';
+import { AdsterraBanner } from '../components/AdsterraBanner.tsx';
 
 interface TermsPageProps {
   onTabChange?: (tab: string) => void;
@@ -153,6 +154,9 @@ export const TermsPage: React.FC<TermsPageProps> = ({ onTabChange }) => {
           </p>
         </section>
       </div>
+
+      {/* Adsterra Sponsored Banner */}
+      <AdsterraBanner />
     </div>
   );
 };

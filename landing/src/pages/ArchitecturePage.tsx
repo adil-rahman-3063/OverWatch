@@ -1,5 +1,6 @@
 import React from 'react';
 import { Layers, ShieldCheck, Cpu, Radio, Network, Server, Lock } from 'lucide-react';
+import { AdsterraBanner } from '../components/AdsterraBanner.tsx';
 
 export const ArchitecturePage: React.FC = () => {
   return (
@@ -194,6 +195,9 @@ export const ArchitecturePage: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* Adsterra Sponsored Banner */}
+      <AdsterraBanner />
     </div>
   );
 };
