@@ -71,6 +71,9 @@ export const PrivacyPage: React.FC<PrivacyPageProps> = ({ onTabChange }) => {
         </div>
       </div>
 
+      {/* Adsterra Sponsored Banner 1 */}
+      <AdsterraBanner />
+
       {/* Content Sections */}
       <div className="space-y-10 text-sm text-neutral-300 leading-relaxed font-sans">
         {/* Section 1 */}
@@ -122,6 +125,9 @@ export const PrivacyPage: React.FC<PrivacyPageProps> = ({ onTabChange }) => {
             </div>
           </div>
         </section>
+
+        {/* Adsterra Sponsored Banner 2 */}
+        <AdsterraBanner />
 
         {/* Section 3 */}
         <section className="space-y-3">

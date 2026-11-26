@@ -113,53 +113,59 @@ export const ChangelogPage: React.FC = () => {
 
       {/* Release List */}
       <div className="space-y-12 font-mono">
-        {releases.map((rel) => (
-          <div key={rel.version} className="p-6 rounded-2xl bg-[#08080a] border border-[#1b1b24] space-y-6">
-            {/* Version Header */}
-            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[#14141c]">
-              <div className="flex items-center gap-3">
-                <span className="text-xl font-bold text-white tracking-wider">{rel.version}</span>
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#14141e] text-neutral-300 border border-[#222230]">
-                  {rel.badge}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-neutral-500">
-                <Tag className="w-3.5 h-3.5" />
-                <span>{rel.date}</span>
-              </div>
-            </div>
-
-            <h2 className="text-base text-neutral-200 font-sans font-semibold">
-              {rel.title}
-            </h2>
-
-            {/* Changes list */}
-            <div className="space-y-4">
-              {rel.changes.map((change, i) => (
-                <div key={i} className="space-y-1 text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold uppercase ${
-                      change.type === 'security' 
-                        ? 'bg-rose-950/60 text-rose-300 border border-rose-500/40' 
-                        : change.type === 'fix' 
-                        ? 'bg-amber-950/60 text-amber-300 border border-amber-500/40' 
-                        : 'bg-white/10 text-white border border-white/20'
-                    }`}>
-                      {change.type}
-                    </span>
-                    <span className="text-white font-medium">{change.title}</span>
-                  </div>
-                  <p className="text-neutral-400 font-sans text-xs leading-relaxed pl-1">
-                    {change.desc}
-                  </p>
+        {releases.map((rel, idx) => (
+          <React.Fragment key={rel.version}>
+            <div className="p-6 rounded-2xl bg-[#08080a] border border-[#1b1b24] space-y-6">
+              {/* Version Header */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[#14141c]">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl font-bold text-white tracking-wider">{rel.version}</span>
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#14141e] text-neutral-300 border border-[#222230]">
+                    {rel.badge}
+                  </span>
                 </div>
-              ))}
+                <div className="flex items-center gap-2 text-xs text-neutral-500">
+                  <Tag className="w-3.5 h-3.5" />
+                  <span>{rel.date}</span>
+                </div>
+              </div>
+
+              <h2 className="text-base text-neutral-200 font-sans font-semibold">
+                {rel.title}
+              </h2>
+
+              {/* Changes list */}
+              <div className="space-y-4">
+                {rel.changes.map((change, i) => (
+                  <div key={i} className="space-y-1 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold uppercase ${
+                        change.type === 'security' 
+                          ? 'bg-rose-950/60 text-rose-300 border border-rose-500/40' 
+                          : change.type === 'fix' 
+                          ? 'bg-amber-950/60 text-amber-300 border border-amber-500/40' 
+                          : 'bg-white/10 text-white border border-white/20'
+                      }`}>
+                        {change.type}
+                      </span>
+                      <span className="text-white font-medium">{change.title}</span>
+                    </div>
+                    <p className="text-neutral-400 font-sans text-xs leading-relaxed pl-1">
+                      {change.desc}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+
+            {/* Adsterra Sponsored Banner 1 & 2 */}
+            {idx === 0 && <AdsterraBanner />}
+            {idx === 2 && <AdsterraBanner />}
+          </React.Fragment>
         ))}
       </div>
 
-      {/* Adsterra Sponsored Banner */}
+      {/* Adsterra Sponsored Banner 3 */}
       <AdsterraBanner />
     </div>
   );

@@ -46,6 +46,9 @@ export const ShowcasePage: React.FC = () => {
         </div>
       </section>
 
+      {/* Adsterra Sponsored Banner 1 */}
+      <AdsterraBanner />
+
       {/* 2. AUDIO SYNTHESIS */}
       <section className="space-y-4">
         <h2 className="text-lg font-mono font-bold text-white uppercase flex items-center gap-2">
@@ -125,6 +128,9 @@ export const ShowcasePage: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* Adsterra Sponsored Banner 2 */}
+      <AdsterraBanner />
 
       {/* 3. HARDWARE RECOMMENDATIONS */}
       <section className="space-y-4">

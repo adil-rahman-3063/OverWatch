@@ -82,6 +82,9 @@ export const ArchitecturePage: React.FC = () => {
         </div>
       </section>
 
+      {/* Adsterra Sponsored Banner 1 */}
+      <AdsterraBanner />
+
       {/* 2. THE FAIL-CLOSED LAW */}
       <section className="space-y-4 content-visibility-auto">
         <h2 className="text-lg font-mono font-bold text-white uppercase flex items-center gap-2">
@@ -153,6 +156,9 @@ export const ArchitecturePage: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* Adsterra Sponsored Banner 2 */}
+      <AdsterraBanner />
 
       {/* 3. LOCAL IPC CONTRACT */}
       <section className="space-y-4 font-mono text-xs content-visibility-auto">

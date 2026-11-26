@@ -94,6 +94,9 @@ export const DocsPage: React.FC = () => {
         </div>
       </section>
 
+      {/* Adsterra Sponsored Banner 1 */}
+      <AdsterraBanner />
+
       {/* STEP 3: Silent System Tray Companion */}
       <section className="space-y-4 font-mono text-xs content-visibility-auto">
         <h2 className="text-lg font-bold text-white uppercase flex items-center gap-2">
@@ -145,6 +148,9 @@ export const DocsPage: React.FC = () => {
           </ul>
         </div>
       </section>
+
+      {/* Adsterra Sponsored Banner 2 */}
+      <AdsterraBanner />
 
       {/* FAQ */}
       <section className="space-y-4 font-mono text-xs content-visibility-auto">

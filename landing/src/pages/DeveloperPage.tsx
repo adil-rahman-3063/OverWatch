@@ -96,6 +96,9 @@ export const DeveloperPage: React.FC = () => {
         </div>
       </section>
 
+      {/* Adsterra Sponsored Banner 1 */}
+      <AdsterraBanner />
+
       {/* 2. THE ORIGIN STORY: WHY OVERWATCH WAS BORN */}
       <section className="space-y-4">
         <h2 className="text-lg font-mono font-bold text-white uppercase flex items-center gap-2">
@@ -120,6 +123,9 @@ export const DeveloperPage: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* Adsterra Sponsored Banner 2 */}
+      <AdsterraBanner />
 
       {/* 3. ENGINEERING ETHOS */}
       <section className="space-y-4">
