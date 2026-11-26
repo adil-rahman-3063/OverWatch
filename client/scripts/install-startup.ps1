@@ -8,7 +8,7 @@ try {
     $wsh = New-Object -ComObject WScript.Shell
     $shortcut = $wsh.CreateShortcut($shortcutPath)
     $shortcut.TargetPath = "powershell.exe"
-    $shortcut.Arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$trayScript`""
+    $shortcut.Arguments = "-STA -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$trayScript`""
     $shortcut.WorkingDirectory = (Resolve-Path "$PSScriptRoot\..").Path
     $shortcut.Description = "OverWatch Windows Client Daemon (System Tray)"
     if (Test-Path $icoPath) {

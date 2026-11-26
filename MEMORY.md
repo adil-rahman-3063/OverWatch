@@ -317,3 +317,26 @@ We engineered a public showcase landing page (`landing/`) deployed at `https://o
 - **Any Screen Ratio & Mobile-First**: Built fluid container scaling so the deck fits comfortably on mobile phones (portrait and landscape), tablets, and ultrawide monitors.
 - **Crawlable HTML5 Endpoints & SEO**: Dedicated paths (`/`, `/architecture`, `/changelog`, `/docs`, `/showcase`, `/developer`) with XML sitemap, `robots.txt`, OpenGraph, and JSON-LD structured schema.
 - **Creator Attribution**: Dedicated `/developer` endpoint detailing Adil Rahman (`@AdilR`) and linking to `https://adilrahman.cc?utm_source=overwatch`.
+
+---
+
+## Log Entry: StandBy Viewport Hardening & Windows Tray Daemon Watchdog
+**Date:** November 26, 2026 — 11:05 IST  
+**Topic:** Mobile Landscape Ergonomics, Zero-Clipping, and Silent System Tray Daemon Architecture
+
+Following real-world testing on mobile devices in landscape StandBy orientation and Windows system setup, we implemented several critical hardening updates:
+
+### 1. StandBy Mobile Landscape Workspace Viewport Hardening
+- **Anti-Clipping Geometry**: In landscape mode on smartphones, viewport height is tight. The left session card previously had slight vertical overflow where the `WORKSPACE` tag was clipped at the top edge. We re-engineered `AgentSessionCard.tsx` in both `web/` and `landing/`:
+  - Enforced `shrink-0` on the Workspace File Path Box so it can never be compressed, squeezed, or pushed off-screen.
+  - Re-aligned the card header: placed `Antigravity` and the status badge (`[● IDLE]`) side-by-side on the left, and view navigator pills (`[Overview | Command | Logs]`) on the right, eliminating text wrapping.
+  - Removed the redundant bottom button (`Swipe ↑ up to inspect running command`) in View 0, saving ~36px of vertical height and giving ample room for all cards.
+  - Implemented automatic local caching of active workspace paths and names (`localStorage.overwatch_last_workspace_name` and `overwatch_last_workspace_path`) so reconnects instantly render `'OverWatch'` without generic fallback placeholders.
+
+### 2. Windows System Tray Daemon Companion Architecture (`tray.ps1`)
+- **Single-Threaded Apartment (`-STA`)**: Required by Windows Forms and `NotifyIcon` for 100% reliable Shell notification area integration. Updated `start-tray.bat`, `setup.ps1`, and startup shortcut creation to pass `-STA`.
+- **Stream Redirection & Lock Prevention**: Eliminated exclusive file locking on `daemon.log`, preventing `IOException` sharing violations during high-frequency child process output piping.
+- **Port 49152 Conflict Resolution**: Auto-detects and terminates stale processes listening on port 49152 before launching a new instance, preventing `EADDRINUSE` errors.
+- **Auto-Revive Watchdog**: Added a lightweight 5-second health check timer inside the tray loop that automatically restarts the Node daemon if terminated unexpectedly.
+- **Graceful PreToolUse Hook Pass-Through**: If OverWatch is uninstalled, disabled in `hooks.json`, or the daemon is temporarily offline, the hook exits transparently with code 0 instead of blocking IDE operations.
+

@@ -27,13 +27,32 @@ $clientDir = Join-Path $rootDir "client"
 
 # 1. Stop running OverWatch daemon processes
 Write-Host "-> Stopping running OverWatch processes..." -ForegroundColor Cyan
-Get-Process node -ErrorAction SilentlyContinue | Where-Object {
-    $_.CommandLine -match "dist[\\/]index.js" -or $_.Path -match "OverWatch"
-} | Stop-Process -Force -ErrorAction SilentlyContinue
+try {
+    $portConn = Get-NetTCPConnection -LocalPort 49152 -ErrorAction SilentlyContinue
+    if ($portConn) {
+        $portConn | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object {
+            if ($_ -gt 0 -and $_ -ne $PID) {
+                Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue
+            }
+        }
+    }
+} catch {}
 
-Get-Process powershell -ErrorAction SilentlyContinue | Where-Object {
-    $_.CommandLine -match "tray.ps1"
-} | Stop-Process -Force -ErrorAction SilentlyContinue
+try {
+    Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" -ErrorAction SilentlyContinue | Where-Object {
+        $_.CommandLine -match "dist[\\/]index\.js"
+    } | ForEach-Object {
+        Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
+    }
+} catch {}
+
+try {
+    Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" -ErrorAction SilentlyContinue | Where-Object {
+        $_.CommandLine -match "tray\.ps1"
+    } | ForEach-Object {
+        Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
+    }
+} catch {}
 Write-Host "  ✓ Processes stopped" -ForegroundColor Green
 
 # 2. Unregister Antigravity hooks
