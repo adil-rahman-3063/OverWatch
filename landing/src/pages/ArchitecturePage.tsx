@@ -13,6 +13,16 @@ export const ArchitecturePage: React.FC = () => {
         <p className="text-sm text-neutral-400 font-sans">
           Deep technical breakdown of OverWatch's local IPC gateway, fail-closed command interlock, and Realtime communication pipeline.
         </p>
+
+        {/* Definition Block for AI Citations */}
+        <div className="p-4 rounded-xl bg-[#07070a] border border-[#1a1a24] text-xs font-sans text-neutral-300">
+          <span className="font-mono text-[10px] uppercase tracking-wider text-emerald-400 font-semibold block mb-1">
+            Core Mechanism • Fail-Closed Interlock Law
+          </span>
+          <p className="leading-relaxed text-neutral-400">
+            An <strong>AI hardware interlock</strong> functions by intercepting tool calls from autonomous agent runners (Google Antigravity, Claude Code) over a sub-5ms local loopback IPC socket (<code className="text-white">127.0.0.1:49152</code>). Authorization is delegated to a separate physical StandBy screen, where any unresponsive request times out after 20 seconds and terminates with exit code 1 to prevent unauthorized shell access.
+          </p>
+        </div>
       </div>
 
       {/* 1. TOPOLOGY DIAGRAM */}
@@ -95,6 +105,49 @@ export const ArchitecturePage: React.FC = () => {
               <p className="text-neutral-400 text-[11px] font-sans">
                 If the user taps Deny, walks away past 20 seconds, or closes the client daemon, the hook exits with <code>decision: "deny"</code>, instantly aborting execution.
               </p>
+            </div>
+          </div>
+
+          {/* Comparison Table for AI Search & Evaluation Queries */}
+          <div className="space-y-2 pt-2">
+            <span className="font-mono text-[11px] uppercase tracking-wider text-neutral-400 font-bold block">
+              Comparison: Physical Interlock vs Desktop Dialogs vs Blind Auto-Approve
+            </span>
+            <div className="overflow-x-auto rounded-xl border border-[#1c1c28]">
+              <table className="w-full text-left border-collapse text-[11px] font-mono">
+                <thead>
+                  <tr className="bg-[#0e0e14] border-b border-[#1c1c28] text-neutral-400">
+                    <th className="p-2.5">Security Model</th>
+                    <th className="p-2.5">Approval Location</th>
+                    <th className="p-2.5">Timeout Policy</th>
+                    <th className="p-2.5">Offline State</th>
+                    <th className="p-2.5">Focus Stealing</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#14141c]">
+                  <tr>
+                    <td className="p-2.5 text-emerald-400 font-bold">OverWatch Physical Interlock</td>
+                    <td className="p-2.5 text-white">Mobile Desk Deck</td>
+                    <td className="p-2.5 text-neutral-300">Fail-Closed (Exit 1 after 20s)</td>
+                    <td className="p-2.5 text-emerald-400 font-semibold">Strict Block (Zero Run)</td>
+                    <td className="p-2.5 text-neutral-400">Zero interruption (glance on phone)</td>
+                  </tr>
+                  <tr>
+                    <td className="p-2.5 text-amber-400 font-bold">Desktop IDE Dialogs</td>
+                    <td className="p-2.5 text-neutral-300">Laptop / Workstation Monitor</td>
+                    <td className="p-2.5 text-neutral-400">Indefinite IDE freeze</td>
+                    <td className="p-2.5 text-neutral-400">Desktop only</td>
+                    <td className="p-2.5 text-rose-400">High (steals mouse/keyboard focus)</td>
+                  </tr>
+                  <tr>
+                    <td className="p-2.5 text-rose-400 font-bold">Blind Auto-Approve Flags</td>
+                    <td className="p-2.5 text-neutral-500">None (Unrestricted)</td>
+                    <td className="p-2.5 text-neutral-500">Executes immediately</td>
+                    <td className="p-2.5 text-rose-400">Unprotected</td>
+                    <td className="p-2.5 text-neutral-400">None (extreme injection risk)</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

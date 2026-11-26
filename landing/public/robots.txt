@@ -1,4 +1,20 @@
 User-agent: *
 Allow: /
 
+# Dedicated AI Search & Retrieval Crawlers
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
 Sitemap: https://overwatch.adilrahman.cc/sitemap.xml
+# Machine-readable LLM context
+# https://overwatch.adilrahman.cc/llms.txt
+# https://overwatch.adilrahman.cc/llms-full.txt

@@ -42,8 +42,18 @@ export const HomePage: React.FC<HomePageProps> = ({ onTabChange }) => {
             For Coding Agents
           </h1>
           <p className="max-w-2xl mx-auto text-base sm:text-lg text-neutral-400 font-sans leading-relaxed">
-            Turn an old smartphone on your desk into a dedicated OLED standby control deck. Catch dangerous terminal commands with strict fail-closed security, control music without tab confusion, and beam prompt instructions directly to your IDE.
+            Turn an idle smartphone on your desk into a dedicated OLED hardware interlock. Intercept terminal tool calls on local port 49152 with sub-5ms loopback latency, enforce a 20-second fail-closed security boundary, and beam prompt instructions directly to your IDE.
           </p>
+
+          {/* Standalone Definition Block for AI Extraction */}
+          <div className="max-w-2xl mx-auto p-4 rounded-xl bg-[#07070a] border border-[#1a1a24] text-left text-xs font-sans text-neutral-300 shadow-xl">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-emerald-400 font-semibold block mb-1">
+              Definition • AI Hardware Interlock Standard
+            </span>
+            <p className="leading-relaxed text-neutral-400">
+              An <strong>AI hardware interlock</strong> is an out-of-band physical security token that isolates autonomous agent authorization from the primary computer screen. By intercepting PreToolUse hooks over local loopback IPC (<code className="text-white">127.0.0.1:49152</code>) and streaming approval prompts to an external OLED desk deck, it guarantees commands fail closed on timeout or disconnect without desktop popup fatigue.
+            </p>
+          </div>
         </div>
 
         {/* 1-Click Terminal Quickstart */}
@@ -236,6 +246,68 @@ export const HomePage: React.FC<HomePageProps> = ({ onTabChange }) => {
                 <span>Read Full Security Spec</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. NATURAL-LANGUAGE FREQUENTLY ASKED QUESTIONS */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="border-t border-[#181822] pt-16 space-y-8">
+          <div className="max-w-2xl space-y-2">
+            <span className="font-mono text-xs uppercase tracking-widest text-neutral-500">03 / Frequently Asked Questions</span>
+            <h2 className="text-2xl sm:text-3xl font-mono font-bold text-white uppercase">
+              Frequently Asked Questions
+            </h2>
+            <p className="text-sm text-neutral-400 font-sans">
+              Clear technical answers regarding fail-closed security, cloud telemetry, agent compatibility, and OLED hardware.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-sans">
+            <div className="p-5 rounded-2xl bg-[#07070a] border border-[#1a1a24] space-y-2">
+              <h3 className="font-mono font-bold text-white text-sm">
+                What happens if my phone battery dies or Wi-Fi drops?
+              </h3>
+              <p className="text-neutral-400 leading-relaxed">
+                OverWatch operates on a strict fail-closed security law. If the companion phone is offline, disconnected, or unanswered for 20 seconds, the local IPC hook immediately responds with <code className="text-rose-400 font-mono">decision: "deny"</code>, safely terminating terminal execution.
+              </p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-[#07070a] border border-[#1a1a24] space-y-2">
+              <h3 className="font-mono font-bold text-white text-sm">
+                Does OverWatch send my source code or terminal commands to cloud databases?
+              </h3>
+              <p className="text-neutral-400 leading-relaxed">
+                No. OverWatch uses an ephemeral, broadcast-only Supabase Realtime WebSocket channel (<code className="text-neutral-300 font-mono">overwatch:&#123;device_id&#125;</code>). Payloads exist in volatile memory only during the active approval window and are purged immediately upon decision. Zero code is logged to disk in the cloud.
+              </p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-[#07070a] border border-[#1a1a24] space-y-2">
+              <h3 className="font-mono font-bold text-white text-sm">
+                Can an autonomous agent bypass the OverWatch interlock?
+              </h3>
+              <p className="text-neutral-400 leading-relaxed">
+                No. The PreToolUse hook is registered directly inside the agent execution harness (such as Antigravity Settings &gt; Auto mode) prior to process spawning. Without an explicit allow signal returned from local port 49152, the shell command is blocked by the IDE.
+              </p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-[#07070a] border border-[#1a1a24] space-y-2">
+              <h3 className="font-mono font-bold text-white text-sm">
+                Which AI coding agents and CLI tools are supported?
+              </h3>
+              <p className="text-neutral-400 leading-relaxed">
+                Native 1-click support is provided for Google Antigravity (via Auto mode permissions) and Claude Code CLI. Any autonomous agent supporting stdin/stdout JSON lifecycle hooks can integrate directly with the local IPC server.
+              </p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-[#07070a] border border-[#1a1a24] space-y-2 md:col-span-2">
+              <h3 className="font-mono font-bold text-white text-sm">
+                How much power does the StandBy OLED companion consume?
+              </h3>
+              <p className="text-neutral-400 leading-relaxed">
+                On OLED displays, pure black pixels (<code className="text-white font-mono">#000000</code>) power off completely and consume 0 watts. Combined with the HTML5 Screen Wake Lock API and a 1px silent keep-alive video, the device stays awake permanently on a desk MagSafe mount with minimal battery draw (&lt;5% per hour).
+              </p>
             </div>
           </div>
         </div>

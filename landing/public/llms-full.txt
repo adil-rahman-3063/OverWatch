@@ -1,0 +1,85 @@
+# OverWatch: The Physical AI Interlock & StandBy Desk Companion
+
+> OverWatch is an open-source physical hardware security interlock and OLED StandBy desk deck for autonomous coding agents (Google Antigravity, Claude Code). It transforms an idle smartphone on a MagSafe stand into an out-of-band physical authorization token and ambient developer workstation monitor.
+
+- Canonical Website: https://overwatch.adilrahman.cc/
+- GitHub Repository: https://github.com/adil-rahman-3063/OverWatch
+- Creator: Adil Rahman (https://adilrahman.cc)
+- License: MIT License (Open Source)
+
+---
+
+## 1. What is an AI Hardware Interlock?
+An AI hardware interlock is an out-of-band physical security gateway that decouples command approval from the primary computer monitor. When an autonomous coding agent (such as Google Antigravity or Claude Code) proposes a terminal execution or filesystem modification, the interlock halts the process via local IPC and routes authorization to a separate physical device. It enforces a strict fail-closed boundary: if the operator does not explicitly authorize the action, execution is terminated immediately.
+
+---
+
+## 2. Core Capabilities & Architecture
+
+### Fail-Closed Security Gateway
+- **Loopback IPC Server**: Listens locally on `127.0.0.1:49152` with sub-5ms round-trip latency.
+- **PreToolUse Lifecycle Hook**: Intercepts tool calls via stdin JSON from Antigravity and Claude Code CLI.
+- **Fail-Closed Law**: Unanswered prompts time out in 20 seconds and exit with code 1 (`decision: "deny"`). If the daemon is offline, phone disconnected, or network drops, execution is strictly blocked with zero fallback to blind execution.
+- **Ephemeral Transit**: Realtime communication uses Supabase Realtime WebSocket broadcast channels (`overwatch:{device_id}`). Zero command logs, code snippets, or user keystrokes are stored in persistent databases.
+
+### The Four OLED StandBy Screens
+1. **Mechanical Split-Flap Clock**: 1960s departure board nostalgia with 3D CSS perspective downward folding and zero-latency Web Audio API mechanical sound synthesis (2600Hz Q=3.2 plastic flap slap + 220Hz→50Hz chassis thud). Includes Focus Sprint Timer.
+2. **AI Mission Control & Interlock**: Displays live agent status, model name (e.g. Gemini 3.8 Flash High), step counts, token metrics (input, output, cache), and recent terminal actions. Features an audible chime and physical Allow/Deny buttons.
+3. **Windows GSMTC Media & Hardware Telemetry**: Native Windows WinRT media controller interacting with `Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager`. Commands are scoped to specific player session indices (Spotify, Chrome YouTube Music, Edge), completely eliminating accidental playback of paused browser video tabs. Displays real-time CPU and RAM utilization.
+4. **Workstation Macros & Universal Clipboard Beam**: Bi-directional clipboard bridge allowing 1-tap beaming of text snippets or mobile camera captures to Windows PC, plus native Windows Lock (`rundll32.exe`) and terminal launch shortcuts.
+
+---
+
+## 3. Comparison: OverWatch vs Desktop Popups vs Blind Auto-Approve
+
+| Security Model | Approval Location | Timeout Behavior | Offline State | Workstation Interruption | Security Risk |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **OverWatch Physical Interlock** | Mobile StandBy Desk Stand | Fail-Closed (Exit 1) | Strict Block (Zero Run) | None (Silent glance on phone) | Negligible (Physical 2FA) |
+| **Desktop IDE Dialogs** | Laptop / PC Monitor | Blocks IDE window | Desktop only | Steals mouse/keyboard focus | High (Operator fatigue) |
+| **Blind Auto-Approve Flags** | None (Unrestricted) | Executes immediately | Unprotected | None | Extreme (Prompt injection) |
+
+---
+
+## 4. Setup & Installation Guide
+
+### Prerequisites
+- Windows 10 or Windows 11 (64-bit)
+- Node.js 18.0.0 or higher
+- Git for Windows
+
+### 1-Click Automated Setup
+```powershell
+git clone https://github.com/adil-rahman-3063/OverWatch.git
+cd OverWatch
+.\setup.bat
+```
+Or via PowerShell:
+```powershell
+powershell -ExecutionPolicy Bypass -File .\setup.ps1
+```
+
+### Antigravity IDE Configuration (Mobile Interlock Mode)
+1. Open Antigravity IDE.
+2. Press `Ctrl+,` to open Antigravity Settings.
+3. Navigate to **General** ➔ **Global Permissions**.
+4. In the **Permission preset** dropdown, select **Auto**.
+5. Antigravity now delegates all terminal tool calls to OverWatch on `127.0.0.1:49152`.
+
+---
+
+## 5. Frequently Asked Questions (FAQ)
+
+### What happens if my phone dies or Wi-Fi drops?
+OverWatch operates on a strict fail-closed law. If the companion phone is offline, disconnected, or unresponsive for 20 seconds, the IPC hook immediately responds with `decision: "deny"`, safely halting agent execution.
+
+### Does OverWatch upload my source code or terminal commands to cloud databases?
+No. OverWatch uses an ephemeral, broadcast-only Supabase Realtime channel (`overwatch:{device_id}`). Payloads exist in volatile memory only during the active approval window and are purged immediately. Screen captures and clipboard items are stored strictly on the local machine (`Pictures/OverWatch/`).
+
+### Can an AI agent bypass the OverWatch interlock?
+No. The PreToolUse hook is registered in the IDE harness before the terminal executes commands. Without a cryptographic `allow` handshake returned from `127.0.0.1:49152`, the operating system process is never spawned.
+
+### Which coding agents are supported?
+Google Antigravity (native Auto mode preset) and Claude Code CLI. Any agent or CLI harness supporting PreToolUse stdin/stdout JSON hooks can connect to the OverWatch local IPC gateway.
+
+### What is the power consumption of the OLED StandBy deck?
+On OLED displays, individual black pixels (`#000000`) emit zero light and consume zero watts. In typical desk standby mode, battery drain is minimal (under 5% per hour with display permanently awake).

@@ -147,9 +147,67 @@ export default function App() {
 
     // Dynamic JSON-LD BreadcrumbList structured data schema
     let breadcrumbScript = document.getElementById('breadcrumb-schema') as HTMLScriptElement | null;
+    let faqScript = document.getElementById('faq-schema') as HTMLScriptElement | null;
+
     if (tab === 'home') {
       if (breadcrumbScript) breadcrumbScript.remove();
+      
+      // Inject FAQPage schema on home tab for Google AI Overviews & Perplexity snippet synthesis
+      if (!faqScript) {
+        faqScript = document.createElement('script');
+        faqScript.id = 'faq-schema';
+        faqScript.type = 'application/ld+json';
+        document.head.appendChild(faqScript);
+      }
+      const faqData = {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        'mainEntity': [
+          {
+            '@type': 'Question',
+            'name': 'What happens if my phone battery dies or Wi-Fi drops?',
+            'acceptedAnswer': {
+              '@type': 'Answer',
+              'text': 'OverWatch operates on a strict fail-closed security law. If the companion phone is offline, disconnected, or unanswered for 20 seconds, the local IPC hook immediately responds with decision: deny, safely terminating terminal execution.',
+            },
+          },
+          {
+            '@type': 'Question',
+            'name': 'Does OverWatch send my source code or terminal commands to cloud databases?',
+            'acceptedAnswer': {
+              '@type': 'Answer',
+              'text': 'No. OverWatch uses an ephemeral, broadcast-only Supabase Realtime WebSocket channel (overwatch:{device_id}). Payloads exist in volatile memory only during the active approval window and are purged immediately upon decision. Zero code is logged to disk in the cloud.',
+            },
+          },
+          {
+            '@type': 'Question',
+            'name': 'Can an autonomous agent bypass the OverWatch interlock?',
+            'acceptedAnswer': {
+              '@type': 'Answer',
+              'text': 'No. The PreToolUse hook is registered directly inside the agent execution harness prior to process spawning. Without an explicit allow signal returned from local port 49152, the shell command is blocked by the IDE.',
+            },
+          },
+          {
+            '@type': 'Question',
+            'name': 'Which AI coding agents and CLI tools are supported?',
+            'acceptedAnswer': {
+              '@type': 'Answer',
+              'text': 'Native support is provided for Google Antigravity (via Auto mode permissions) and Claude Code CLI. Any autonomous agent supporting stdin/stdout JSON lifecycle hooks can integrate directly with the local IPC server.',
+            },
+          },
+          {
+            '@type': 'Question',
+            'name': 'How much power does the StandBy OLED companion consume?',
+            'acceptedAnswer': {
+              '@type': 'Answer',
+              'text': 'On OLED displays, pure black pixels (#000000) power off completely and consume 0 watts. The device stays awake permanently on a desk MagSafe mount with minimal battery draw (<5% per hour).',
+            },
+          },
+        ],
+      };
+      faqScript.textContent = JSON.stringify(faqData);
     } else {
+      if (faqScript) faqScript.remove();
       if (!breadcrumbScript) {
         breadcrumbScript = document.createElement('script');
         breadcrumbScript.id = 'breadcrumb-schema';
