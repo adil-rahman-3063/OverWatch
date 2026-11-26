@@ -7,6 +7,8 @@ import { ChangelogPage } from './pages/ChangelogPage.tsx';
 import { DocsPage } from './pages/DocsPage.tsx';
 import { ShowcasePage } from './pages/ShowcasePage.tsx';
 import { DeveloperPage } from './pages/DeveloperPage.tsx';
+import { PrivacyPage } from './pages/PrivacyPage.tsx';
+import { TermsPage } from './pages/TermsPage.tsx';
 
 // Mapping of clean URL paths to tab identifiers
 const PATH_TO_TAB: Record<string, string> = {
@@ -20,6 +22,11 @@ const PATH_TO_TAB: Record<string, string> = {
   '/developer': 'developer',
   '/dev': 'developer',
   '/about': 'developer',
+  '/privacy': 'privacy',
+  '/privacy-policy': 'privacy',
+  '/terms': 'terms',
+  '/terms-of-service': 'terms',
+  '/license': 'terms',
 };
 
 const TAB_TO_PATH: Record<string, string> = {
@@ -29,6 +36,8 @@ const TAB_TO_PATH: Record<string, string> = {
   docs: '/docs',
   showcase: '/showcase',
   developer: '/developer',
+  privacy: '/privacy',
+  terms: '/terms',
 };
 
 // Base Canonical Domain
@@ -60,6 +69,14 @@ const PAGE_META: Record<string, { title: string; description: string }> = {
     title: 'Adil Rahman • Creator of OverWatch (adilrahman.cc)',
     description: 'About Adil Rahman (adilrahman.cc), software engineer and builder of OverWatch. Dedicated to autonomous agent tooling and physical cyberdecks.',
   },
+  privacy: {
+    title: 'Privacy Policy • OverWatch',
+    description: 'Zero telemetry, local-first privacy policy and data governance for OverWatch.',
+  },
+  terms: {
+    title: 'Terms of Service & License • OverWatch',
+    description: 'Terms of service, open-source MIT license, and user agreement for OverWatch.',
+  },
 };
 
 export default function App() {
@@ -71,7 +88,7 @@ export default function App() {
     }
     // 2. Fallback check for legacy hash (e.g. /#docs)
     const hash = window.location.hash.replace('#', '').toLowerCase();
-    if (['home', 'architecture', 'changelog', 'docs', 'showcase', 'developer'].includes(hash)) {
+    if (['home', 'architecture', 'changelog', 'docs', 'showcase', 'developer', 'privacy', 'terms'].includes(hash)) {
       return hash;
     }
     return 'home';
@@ -156,6 +173,8 @@ export default function App() {
         {currentTab === 'docs' && <DocsPage />}
         {currentTab === 'showcase' && <ShowcasePage />}
         {currentTab === 'developer' && <DeveloperPage />}
+        {currentTab === 'privacy' && <PrivacyPage onTabChange={handleTabChange} />}
+        {currentTab === 'terms' && <TermsPage onTabChange={handleTabChange} />}
       </main>
 
       {/* Footer */}

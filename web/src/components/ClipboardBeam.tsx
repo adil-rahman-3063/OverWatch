@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Send,
   ArrowDownToLine,
@@ -14,7 +15,9 @@ import {
   Radio,
   Maximize2,
   Plus,
-  Layers
+  Layers,
+  Share2,
+  ExternalLink
 } from 'lucide-react';
 
 export interface ClipboardBeamProps {
@@ -143,6 +146,73 @@ export const ClipboardBeam: React.FC<ClipboardBeamProps> = ({
   // -------------------------------------------------------------
   // PC Image Fetching Handlers
   // -------------------------------------------------------------
+  // -------------------------------------------------------------
+  // Universal Download & iOS Safari Share Sheet Handler
+  // Supports desktop, Android, and iOS Safari Standalone / PWA
+  // -------------------------------------------------------------
+  const downloadOrShareImage = async (src: string, defaultName: string) => {
+    let blob: Blob | null = null;
+    try {
+      if (src.startsWith('data:')) {
+        const parts = src.split(',');
+        const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+        const bstr = atob(parts[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        blob = new Blob([u8arr], { type: mime });
+      } else {
+        const resp = await fetch(src);
+        blob = await resp.blob();
+      }
+    } catch (err) {
+      console.warn('[ImageBeam] Failed parsing image blob:', err);
+    }
+
+    // 1. Native Web Share API (Primary for iOS Safari / PWA: triggers native "Save Image" to Photos!)
+    if (blob && navigator.share && navigator.canShare) {
+      try {
+        const file = new File([blob], defaultName, { type: blob.type || 'image/jpeg' });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: defaultName,
+          });
+          return;
+        }
+      } catch (err: any) {
+        if (err.name === 'AbortError') return;
+        console.warn('[ImageBeam] Web Share rejected or cancelled:', err);
+      }
+    }
+
+    // 2. Standard browser download for Android, Chrome, and Desktop
+    try {
+      const url = blob ? URL.createObjectURL(blob) : src;
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = defaultName;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        document.body.removeChild(link);
+        if (blob) URL.revokeObjectURL(url);
+      }, 2000);
+    } catch {}
+
+    // 3. iOS Safari PWA fallback: Open image in new tab if download tag was ignored
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (isIOS) {
+      try {
+        window.open(src, '_blank');
+      } catch {}
+    }
+  };
+
   const handleFetchClipboardImage = async () => {
     if (!onFetchPcClipboardImage) return;
     setFetchingPcImage(true);
@@ -152,14 +222,7 @@ export const ClipboardBeam: React.FC<ClipboardBeamProps> = ({
         const src = res.base64.startsWith('data:') ? res.base64 : `data:image/jpeg;base64,${res.base64}`;
         setReceivedImage(src);
         setReceivedImageType('clipboard');
-
-        // Automatically trigger browser download to mobile device
-        const link = document.createElement('a');
-        link.href = src;
-        link.download = `pc_clipboard_${Date.now()}.jpg`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        setLightboxOpen(true);
         if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
       }
     } catch {}
@@ -175,14 +238,7 @@ export const ClipboardBeam: React.FC<ClipboardBeamProps> = ({
         const src = res.base64.startsWith('data:') ? res.base64 : `data:image/jpeg;base64,${res.base64}`;
         setReceivedImage(src);
         setReceivedImageType('screen');
-
-        // Automatically trigger browser download to mobile device
-        const link = document.createElement('a');
-        link.href = src;
-        link.download = `pc_screenshot_${Date.now()}.jpg`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        setLightboxOpen(true);
         if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
       }
     } catch {}
@@ -191,10 +247,8 @@ export const ClipboardBeam: React.FC<ClipboardBeamProps> = ({
 
   const handleDownloadReceivedImage = () => {
     if (!receivedImage) return;
-    const link = document.createElement('a');
-    link.href = receivedImage;
-    link.download = `overwatch_${receivedImageType || 'image'}_${Date.now()}.png`;
-    link.click();
+    const name = `overwatch_${receivedImageType || 'image'}_${Date.now()}.jpg`;
+    downloadOrShareImage(receivedImage, name);
   };
 
   const isLanAvailable = Boolean(lanIp && lanIp !== '127.0.0.1');
@@ -526,10 +580,12 @@ export const ClipboardBeam: React.FC<ClipboardBeamProps> = ({
 
             {/* Received PC Image Preview */}
             {receivedImage && (
-              <div className="relative rounded-lg border border-[#23232c] bg-[#07070a] p-1 flex items-center justify-between gap-2">
+              <div 
+                className="relative rounded-lg border border-[#23232c] bg-[#07070a] p-1.5 flex items-center justify-between gap-2 cursor-pointer hover:border-neutral-600 transition-colors"
+                onClick={() => setLightboxOpen(true)}
+              >
                 <div
-                  className="relative cursor-pointer group shrink-0"
-                  onClick={() => setLightboxOpen(true)}
+                  className="relative shrink-0"
                   title="Tap to enlarge"
                 >
                   <img
@@ -543,16 +599,19 @@ export const ClipboardBeam: React.FC<ClipboardBeamProps> = ({
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <div className="text-[10px] font-mono text-neutral-300 truncate">
+                  <div className="text-[10px] font-mono font-medium text-neutral-200 truncate">
                     {receivedImageType === 'screen' ? '🖥️ Desktop Capture' : '📋 Clipboard Image'}
                   </div>
-                  <div className="text-[9px] font-mono text-neutral-500">
-                    Tap image to view
+                  <div className="text-[9px] font-mono text-emerald-400">
+                    Tap to enlarge & save
                   </div>
                 </div>
 
                 <button
-                  onClick={handleDownloadReceivedImage}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDownloadReceivedImage();
+                  }}
                   className="p-2 rounded bg-neutral-900 border border-neutral-700 text-neutral-300 hover:text-white hover:bg-neutral-800 shrink-0"
                   title="Download to Phone"
                 >
@@ -564,34 +623,66 @@ export const ClipboardBeam: React.FC<ClipboardBeamProps> = ({
         </div>
       )}
 
-      {/* Lightbox Modal for Fullscreen Image Inspection */}
-      {lightboxOpen && receivedImage && (
+      {/* Lightbox Modal for Fullscreen Image Inspection - Rendered in Portal so it escapes transformed slide */}
+      {lightboxOpen && receivedImage && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center p-3"
+          className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex flex-col items-center justify-between p-3"
+          style={{ WebkitTouchCallout: 'default' }}
           onClick={() => setLightboxOpen(false)}
         >
-          <div className="absolute top-4 right-4 flex items-center gap-2">
-            <button
-              onClick={handleDownloadReceivedImage}
-              className="px-3 py-1.5 rounded-lg bg-neutral-800 text-white font-mono text-xs flex items-center gap-1.5"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>Save</span>
-            </button>
-            <button
-              onClick={() => setLightboxOpen(false)}
-              className="p-1.5 rounded-lg bg-neutral-800 text-neutral-400 hover:text-white"
-            >
-              <X className="w-5 h-5" />
-            </button>
+          {/* Top Bar */}
+          <div className="w-full flex items-center justify-between px-2 pt-1 z-10" onClick={(e) => e.stopPropagation()}>
+            <span className="text-[11px] font-mono text-neutral-300">
+              {receivedImageType === 'screen' ? '🖥️ Desktop Screen Capture' : '📋 Windows Clipboard Image'}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDownloadReceivedImage();
+                }}
+                className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-mono text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-md"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                <span>Save to Photos</span>
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.open(receivedImage, '_blank');
+                }}
+                className="p-1.5 rounded-lg bg-[#14141a] border border-[#252530] text-neutral-300 hover:text-white"
+                title="Open in Safari / Browser Tab"
+              >
+                <ExternalLink className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setLightboxOpen(false)}
+                className="p-1.5 rounded-lg bg-[#14141a] border border-[#252530] text-neutral-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
-          <img
-            src={receivedImage}
-            alt="Full view"
-            className="max-w-full max-h-[85vh] object-contain rounded-lg border border-neutral-800"
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
+
+          {/* Centered Image */}
+          <div className="flex-1 flex items-center justify-center p-2 w-full min-h-0 overflow-auto" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={receivedImage}
+              alt="Full view"
+              className="max-w-full max-h-[75vh] object-contain rounded-lg border border-neutral-800 shadow-2xl pointer-events-auto"
+              style={{ WebkitTouchCallout: 'default', userSelect: 'auto' }}
+            />
+          </div>
+
+          {/* Bottom Safari Hint */}
+          <div className="pb-2 text-center" onClick={(e) => e.stopPropagation()}>
+            <p className="text-[10px] font-mono text-neutral-400">
+              💡 Tap <span className="text-emerald-400 font-semibold">"Save to Photos"</span>, or touch & hold photo to save directly to Camera Roll.
+            </p>
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* Bottom Footer Note */}

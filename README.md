@@ -1,6 +1,11 @@
 # 🛡️ OverWatch
 
-> **Remote Deck for Windows**: Music & Media Controls, Antigravity & AI Agent Command Approvals, and Real-Time Quota Gauges for your phone.
+> **Physical AI Interlock & Ambient StandBy Desk Deck for Windows**: Music & Media Controls, Antigravity AI Agent Command Approvals, and Real-Time Quota Gauges for your phone.
+
+- **Canonical Website**: [https://overwatch.adilrahman.cc](https://overwatch.adilrahman.cc)
+- **Official GitHub**: [https://github.com/adil-rahman-3063/OverWatch](https://github.com/adil-rahman-3063/OverWatch)
+- **Author**: [Adil Rahman](https://adilrahman.cc)
+- **License**: [MIT License](file:///c:/Users/adilr/Documents/open-source/OverWatch/TERMS.md)
 
 > [!IMPORTANT]
 > **Agent Support & Testing Notice**: Currently, **Google Antigravity** is the primary agent thoroughly tested and verified in live developer workflows. Hook templates for other agents (such as Claude Code) are provided as references; **please test and verify hook behavior in your specific environment before relying on it in critical workflows.**
@@ -149,11 +154,46 @@ To run OverWatch without keeping a terminal window open on your desktop:
 
 ---
 
-## 🔒 Security
-- **Fail-Safe / Fail-Closed**: If the OverWatch daemon is offline or a request times out, it gracefully falls back to local terminal prompts so your workflow is never locked out.
-- **No Command Injection**: The phone can only send `allow` or `deny` responses for specific request IDs. It can never send arbitrary terminal commands to your PC.
+## 🔒 Privacy & Data Governance
+
+OverWatch is built from the ground up on a strict **zero-telemetry, local-first** architecture. Your developer environment, agent terminal streams, and workstation telemetry are sacred.
+
+> **Full Legal Policy**: Read the exhaustive, legal-grade [OverWatch Privacy Policy](file:///c:/Users/adilr/Documents/open-source/OverWatch/PRIVACY.md).
+> Also see component-specific policies:
+> - Client Daemon: [client/PRIVACY.md](file:///c:/Users/adilr/Documents/open-source/OverWatch/client/PRIVACY.md)
+> - Web Application: [web/PRIVACY.md](file:///c:/Users/adilr/Documents/open-source/OverWatch/web/PRIVACY.md)
+> - Landing Page: [landing/PRIVACY.md](file:///c:/Users/adilr/Documents/open-source/OverWatch/landing/PRIVACY.md) (or live at [overwatch.adilrahman.cc/privacy](https://overwatch.adilrahman.cc/privacy))
+
+### Core Privacy Guarantees:
+- **Zero Third-Party Analytics**: No Google Analytics, no tracking pixels, no telemetry beacons, and zero telemetry SDKs anywhere in the code.
+- **Local Loopback Isolation**: The local IPC interlock binds strictly to `127.0.0.1:49152`. It cannot be probed, triggered, or accessed from outside your workstation.
+- **Ephemeral Realtime Relay**: Command approvals and telemetry broadcast over encrypted Supabase Realtime WebSockets. Nothing is persisted to database tables, message logs, or cloud storage.
+- **Local Screen & Clipboard Storage**: Screen captures and beamed images are stored strictly on your local disk (`C:\Users\<User>\Pictures\OverWatch`). They are never uploaded to any cloud storage bucket.
+- **Fail-Closed Security Boundary**: Terminal command approvals fail closed if pairing or network connection drops, ensuring unreviewed agent actions never execute silently.
 
 ---
 
-## 📄 License
-MIT © 2026 Adil Rahman
+## 📜 Terms of Service & Open-Source License
+
+OverWatch is released as free, open-source software under the permissive **MIT License**.
+
+> **Full Legal Terms**: Read the comprehensive [OverWatch Terms of Service & License](file:///c:/Users/adilr/Documents/open-source/OverWatch/TERMS.md).
+> Also see component-specific terms:
+> - Client Daemon: [client/TERMS.md](file:///c:/Users/adilr/Documents/open-source/OverWatch/client/TERMS.md)
+> - Web Application: [web/TERMS.md](file:///c:/Users/adilr/Documents/open-source/OverWatch/web/TERMS.md)
+> - Landing Page: [landing/TERMS.md](file:///c:/Users/adilr/Documents/open-source/OverWatch/landing/TERMS.md) (or live at [overwatch.adilrahman.cc/terms](https://overwatch.adilrahman.cc/terms))
+
+### License Summary (MIT):
+- **Freedom of Use**: You are free to run, study, fork, modify, self-host, and redistribute OverWatch in personal, commercial, or educational environments.
+- **User Responsibility**: You retain sole responsibility for commands executed and approved via the physical interlock deck.
+- **Warranty Disclaimer**: THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. IN NO EVENT SHALL ADIL RAHMAN OR CONTRIBUTORS BE LIABLE FOR ANY CLAIM, DAMAGES, OR DATA LOSS ARISING OUT OF THE USE OF THIS SOFTWARE.
+
+---
+
+## 👨‍💻 Creator & Community
+
+- **Creator & Maintainer**: [Adil Rahman (adilrahman.cc)](https://adilrahman.cc)
+- **Official Website**: [https://overwatch.adilrahman.cc](https://overwatch.adilrahman.cc)
+- **GitHub Repository**: [https://github.com/adil-rahman-3063/OverWatch](https://github.com/adil-rahman-3063/OverWatch)
+- **Bug Reports & Feature Requests**: [GitHub Issues](https://github.com/adil-rahman-3063/OverWatch/issues)
+

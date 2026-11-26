@@ -83,6 +83,24 @@ export const Footer: React.FC<FooterProps> = ({ onTabChange }) => {
                   Desk StandBy Showcase
                 </a>
               </li>
+              <li>
+                <a 
+                  href="/privacy" 
+                  onClick={(e) => { e.preventDefault(); onTabChange('privacy'); }} 
+                  className="hover:text-white transition-colors text-emerald-400/90 hover:text-emerald-300"
+                >
+                  Privacy Policy
+                </a>
+              </li>
+              <li>
+                <a 
+                  href="/terms" 
+                  onClick={(e) => { e.preventDefault(); onTabChange('terms'); }} 
+                  className="hover:text-white transition-colors text-cyan-400/90 hover:text-cyan-300"
+                >
+                  Terms & Licensing
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -102,17 +120,17 @@ export const Footer: React.FC<FooterProps> = ({ onTabChange }) => {
           <div className="space-y-2">
             <h4 className="text-white font-medium uppercase tracking-wider text-[11px]">Open Source</h4>
             <p className="text-neutral-500 text-xs font-sans">
-              Released under the permissive MIT License. Contributions and PRs welcome on GitHub.
+              Released under the permissive MIT License. Created by <a href="https://adilrahman.cc" target="_blank" rel="noopener noreferrer" className="text-white hover:underline">Adil Rahman</a>.
             </p>
             <div className="pt-2">
               <a
-                href="https://github.com/AdilR/OverWatch"
+                href="https://github.com/adil-rahman-3063/OverWatch"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-white hover:underline"
               >
                 <GithubIcon className="w-3.5 h-3.5" />
-                <span>github.com/AdilR/OverWatch</span>
+                <span>github.com/adil-rahman-3063/OverWatch</span>
                 <ArrowUpRight className="w-3 h-3 text-neutral-500" />
               </a>
             </div>
@@ -121,12 +139,26 @@ export const Footer: React.FC<FooterProps> = ({ onTabChange }) => {
 
         <div className="pt-6 border-t border-[#14141a] flex flex-col sm:flex-row items-center justify-between gap-4 text-neutral-600 text-[11px]">
           <div>
-            © {new Date().getFullYear()} OverWatch Project. Built for autonomous development workflows.
+            © {new Date().getFullYear()} OverWatch by <a href="https://adilrahman.cc" target="_blank" rel="noopener noreferrer" className="hover:text-neutral-300 transition-colors">Adil Rahman</a>. Built for autonomous development workflows.
           </div>
           <div className="flex items-center gap-4">
-            <span>MIT License</span>
+            <a 
+              href="/privacy" 
+              onClick={(e) => { e.preventDefault(); onTabChange('privacy'); }}
+              className="hover:text-neutral-400"
+            >
+              Privacy Policy
+            </a>
             <span>•</span>
-            <a href="https://github.com/AdilR/OverWatch/issues" target="_blank" rel="noopener noreferrer" className="hover:text-neutral-400">
+            <a 
+              href="/terms" 
+              onClick={(e) => { e.preventDefault(); onTabChange('terms'); }}
+              className="hover:text-neutral-400"
+            >
+              Terms of Service
+            </a>
+            <span>•</span>
+            <a href="https://github.com/adil-rahman-3063/OverWatch/issues" target="_blank" rel="noopener noreferrer" className="hover:text-neutral-400">
               Report an Issue
             </a>
           </div>
