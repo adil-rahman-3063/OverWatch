@@ -92,5 +92,6 @@ export interface AgentSessionState {
     unpushedCommitsCount: number;
     suggestedPushCommand: string;
     branch?: string;
+    commitMessage?: string;
   };
 }

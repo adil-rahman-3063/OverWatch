@@ -142,8 +142,22 @@ export class SupabaseService {
     this.channel.on('broadcast', { event: 'agent:git_push' }, async ({ payload }) => {
       const workspace = payload?.workspace || process.cwd();
       const customCmd = payload?.command;
-      const message = payload?.commitMessage || 'feat: updates from OverWatch mobile deck';
-      const cleanMsg = message.replace(/["`$]/g, '');
+
+      let message = payload?.commitMessage;
+      if (!message || message === 'feat: updates from OverWatch mobile deck') {
+        try {
+          const state = await agentSessionMonitor.getSessionState();
+          const matched = state.sessions?.find((s) => s.workspace === workspace) || state;
+          if (matched?.gitStatus?.commitMessage) {
+            message = matched.gitStatus.commitMessage;
+          }
+        } catch {}
+      }
+      if (!message) {
+        message = 'feat: updates from Antigravity session';
+      }
+
+      const cleanMsg = message.replace(/["`$]/g, '').slice(0, 72).trim();
       const pushCommand = customCmd && typeof customCmd === 'string'
         ? customCmd
         : `git add -A; git commit -m "${cleanMsg}"; git push origin main`;

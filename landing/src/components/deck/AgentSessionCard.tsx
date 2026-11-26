@@ -515,6 +515,13 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                   </span>
                 </div>
 
+                {currentSession.gitStatus.commitMessage && (
+                  <div className="text-[9.5px] font-mono text-neutral-300 bg-black/60 px-2 py-1 rounded border border-neutral-800 truncate">
+                    <span className="text-amber-400 font-semibold">Commit: </span>
+                    <span>"{currentSession.gitStatus.commitMessage}"</span>
+                  </div>
+                )}
+
                 <button
                   onClick={() => {
                     if (onGitPush && currentSession?.gitStatus?.suggestedPushCommand) {

@@ -38,6 +38,7 @@ export interface AgentSessionState {
     unpushedCommitsCount: number;
     suggestedPushCommand: string;
     branch?: string;
+    commitMessage?: string;
   };
 }
 
@@ -133,6 +134,9 @@ export class AgentSessionMonitor {
       let lastModel = 'gemini-3.8-flash-high';
       let lastStepIndex = lines.length;
       let lastUserPrompt = '';
+      let lastAntigravityFocus = '';
+      let lastGitCommitInLog = '';
+      let lastToolSummary = '';
       let inputTokens = 0;
       let outputTokens = 0;
       let cacheTokens = 0;
@@ -151,8 +155,8 @@ export class AgentSessionMonitor {
         }
       }
 
-      // Scan backwards through the last 30 lines for activity
-      const sample = lines.slice(-30);
+      // Scan backwards through the last 40 lines for activity
+      const sample = lines.slice(-40);
       for (const line of sample) {
         try {
           const entry = JSON.parse(line);
@@ -191,6 +195,19 @@ export class AgentSessionMonitor {
 
           if (Array.isArray(entry.tool_calls)) {
             for (const call of entry.tool_calls) {
+              if (call.name === 'update_focus' && call.args?.focus) {
+                lastAntigravityFocus = String(call.args.focus).trim();
+              }
+              if (call.args?.toolSummary) {
+                lastToolSummary = String(call.args.toolSummary).trim();
+              }
+              if (call.name === 'run_command' && call.args?.CommandLine) {
+                const gitMatch = String(call.args.CommandLine).match(/git\s+commit\s+.*?-m\s+["']([^"']+)["']/i);
+                if (gitMatch) {
+                  lastGitCommitInLog = gitMatch[1].trim();
+                }
+              }
+
               const detail =
                 call.args?.CommandLine ||
                 call.args?.Path ||
@@ -226,7 +243,14 @@ export class AgentSessionMonitor {
         status = 'running';
       }
 
-      const gitStatus = await this.checkGitStatus(activeWorkspace, lastUserPrompt);
+      const antigravityCommitMsg = this.formatAntigravityCommitMessage(
+        lastAntigravityFocus,
+        lastGitCommitInLog,
+        lastToolSummary,
+        lastUserPrompt
+      );
+
+      const gitStatus = await this.checkGitStatus(activeWorkspace, antigravityCommitMsg);
       const hookActions = isCurrentHook ? this.recentHookActions : [];
       const combinedActions = [...hookActions, ...actionsFromLog].slice(0, 8);
 
@@ -291,7 +315,44 @@ export class AgentSessionMonitor {
     };
   }
 
-  private async checkGitStatus(workspace: string, lastTask: string) {
+  /**
+   * Intelligently formats an Antigravity session's state into a Conventional Commit message.
+   * Prioritizes actual git commits previously executed in the session, then Antigravity update_focus,
+   * then toolSummary, and falls back to clean user prompt.
+   */
+  private formatAntigravityCommitMessage(
+    focus?: string,
+    gitCommitInLog?: string,
+    toolSummary?: string,
+    userPrompt?: string
+  ): string {
+    if (gitCommitInLog && gitCommitInLog.length > 5) {
+      return gitCommitInLog.replace(/["`$\\]/g, '').trim().slice(0, 72);
+    }
+    if (focus && focus.length > 5) {
+      let clean = focus.replace(/["`$\\]/g, '').trim();
+      if (/^fixing\s+/i.test(clean)) clean = clean.replace(/^fixing\s+/i, 'fix: ');
+      else if (/^building\s+/i.test(clean)) clean = clean.replace(/^building\s+/i, 'feat: ');
+      else if (/^updating\s+/i.test(clean)) clean = clean.replace(/^updating\s+/i, 'docs: ');
+      else if (/^refactoring\s+/i.test(clean)) clean = clean.replace(/^refactoring\s+/i, 'refactor: ');
+      else if (/^adding\s+/i.test(clean)) clean = clean.replace(/^adding\s+/i, 'feat: add ');
+      else if (!/^(feat|fix|docs|refactor|chore|test|style):/i.test(clean)) clean = `feat: ${clean.toLowerCase()}`;
+      return clean.slice(0, 72).trim();
+    }
+    if (toolSummary && toolSummary.length > 5) {
+      let clean = toolSummary.replace(/["`$\\]/g, '').trim();
+      if (!/^(feat|fix|docs|refactor|chore|test|style):/i.test(clean)) clean = `feat: ${clean.toLowerCase()}`;
+      return clean.slice(0, 72).trim();
+    }
+    if (userPrompt && userPrompt.length > 3) {
+      let clean = userPrompt.replace(/<[^>]+>/g, '').replace(/["`$\\]/g, '').trim();
+      if (!/^(feat|fix|docs|refactor|chore|test|style):/i.test(clean)) clean = `feat: ${clean}`;
+      return clean.slice(0, 72).trim();
+    }
+    return 'feat: updates from Antigravity session';
+  }
+
+  private async checkGitStatus(workspace: string, antigravityCommitMsg: string) {
     try {
       const { stdout: statusOut } = await execPromise('git status --porcelain', { cwd: workspace, timeout: 3000 });
       const changedLines = statusOut.trim().split('\n').filter(Boolean);
@@ -309,9 +370,9 @@ export class AgentSessionMonitor {
         unpushedCount = logOut.trim().split('\n').filter(Boolean).length;
       } catch {}
 
-      const cleanMsg = (lastTask || 'feat: updates from OverWatch')
+      const cleanMsg = (antigravityCommitMsg || 'feat: updates from Antigravity session')
         .replace(/["`\\]/g, '')
-        .slice(0, 48)
+        .slice(0, 72)
         .trim();
 
       return {
@@ -320,6 +381,7 @@ export class AgentSessionMonitor {
         unpushedCommitsCount: unpushedCount,
         suggestedPushCommand: `git add -A; git commit -m "${cleanMsg}"; git push origin ${branch}`,
         branch,
+        commitMessage: cleanMsg,
       };
     } catch {
       return {
@@ -328,6 +390,7 @@ export class AgentSessionMonitor {
         unpushedCommitsCount: 0,
         suggestedPushCommand: 'git push origin main',
         branch: 'main',
+        commitMessage: 'feat: updates from Antigravity session',
       };
     }
   }

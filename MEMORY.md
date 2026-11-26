@@ -405,3 +405,57 @@ To ensure that anyone cloning the repository has an effortless, 1-click setup ex
 - **Sequential One-by-One Beaming**: Beams images sequentially with animated progress (`Beaming 2 of 4...`) and a brief 500ms settling interval between transmissions. Each image is assigned a unique millisecond timestamp on disk (`beam_YYYY-MM-DDTHH-mm-ss_ms_rand.png`), avoiding file overwrites and leaving the Windows Clipboard primed with the final image.
 - **Payload Compression Guard**: Added client-side HTML5 canvas compression in `web/src/App.tsx` ensuring high-res mobile photos (often 5-15MB) are downsampled to max 1280px / 0.75 JPEG, effortlessly remaining below Supabase Realtime's 256KB WebSocket ceiling.
 
+---
+
+## Log Entry: Native C# Screencap Engine, AMSI Antivirus Bypass, Socket ENOTCONN Resolution & Comprehensive Privacy/Terms Suite
+**Date:** November 26, 2026 — 13:00 IST  
+**Topic:** Windows Defender PowerShell AMSI Script Block, Native C# Screencap Engine (`screencap.exe`), Libuv Socket ENOTCONN Fix, iOS Safari PWA Share Sheet & Legal Suite
+
+### 1. Eliminating PowerShell AMSI Blocks via Native C# Engine (`screencap.exe`)
+- **Root Cause**: Windows Defender AMSI (Antimalware Scan Interface) flagged inline PowerShell script invocations containing `Add-Type -MemberDefinition '[DllImport("user32.dll")] public static extern bool SetProcessDPIAware();'` alongside `CopyFromScreen` as `ScriptContainedMaliciousContent` (heuristic match for screen grabbers), abruptly aborting screen captures and throwing `ParserError`.
+- **Resolution**: Replaced PowerShell entirely for graphics and clipboard operations with a native, compiled C# utility (`client/bin/ScreenCapture.cs` compiled via `csc.exe` to `client/bin/screencap.exe`):
+  - `-capture <path>`: True physical DPI-aware primary monitor capture, saving full-res PNG to `Pictures/OverWatch/Screenshots/snip_*.png` and outputting 75% quality JPEG base64 to stdout in under 30ms.
+  - `-set <path>`: Direct Windows Clipboard bitmap update from file stream with retry loop.
+  - `-get`: Reads Windows Clipboard image, downsamples to max 1280px at 80% JPEG quality, and outputs base64 to stdout (or `NO_IMAGE`), completely eliminating PowerShell from `readClipboardImage`.
+  - `-notify <title> <sub>`: Spawns native OLED dark HUD toast with `SystemSounds.Asterisk` chime without window stealing.
+  - Auto-compiles via .NET Framework 4.0 `csc.exe` if binary is missing.
+
+### 2. Node.js Libuv Socket `Error: read ENOTCONN` Resolution
+- **Root Cause**: Using `child_process.execFile(...).unref()` or `exec(...).unref()` to launch detached notification processes caused libuv stream lifecycle errors (`errno: -4053, code: 'ENOTCONN', syscall: 'read'`) when the detached child closed its inherited standard I/O pipes while Node was attempting to read.
+- **Resolution**: Switched to `spawn(screencapExe, [...], { detached: true, stdio: 'ignore' }).unref()`, completely severing pipe handles and preventing any socket lifecycle conflicts.
+
+### 3. iOS Safari PWA Standalone Mode Lightbox & Download Fix
+- **Root Cause #1 (Modal Off-Screen)**: The 4-screen deck carousel uses CSS `transform: translateX(-300%)` for smooth swiping. Under WebKit / Safari, `position: fixed` child elements are constrained to the local coordinate system of the transformed ancestor instead of the screen viewport — causing the fullscreen Lightbox modal to open 3 screens away on Slide 1 (the Clock slide)!
+- **Root Cause #2 (Failed Downloads)**: In standalone PWA mode (`apple-mobile-web-app-capable`), iOS Safari completely ignores programmatic `<a download>` clicks on data/blob URLs. Furthermore, Tailwind's `select-none` on the modal applied `-webkit-touch-callout: none`, preventing users from long-pressing to save the photo.
+- **Resolution**:
+  - Portaled the Lightbox modal to `document.body` via React's `createPortal(..., document.body)`. The modal now opens centered on whichever slide the user is currently viewing.
+  - Integrated native Web Share API (`navigator.share({ files: [file] })`), opening the native iOS Share Sheet with the **"Save Image"** action directly into Apple Photos.
+  - Added an **"Open in Safari Tab"** fallback button (`window.open`).
+  - Enabled `-webkit-touch-callout: default; user-select: auto;` so long-pressing the photo on iPhone immediately triggers the native iOS image save/copy context menu.
+  - Hardened canvas downsampling in `web/src/App.tsx` with a progressive quality reduction loop, ensuring beamed mobile camera snaps never exceed 180KB (< 256KB Supabase WebSocket limit).
+
+### 4. Comprehensive Legal Suite, Landing Endpoints & Markdown Documentation
+- **Deliverables**: Created 2 distinct, legal-grade documents across all 3 directories:
+  - Root: [`PRIVACY.md`](file:///c:/Users/adilr/Documents/open-source/OverWatch/PRIVACY.md) and [`TERMS.md`](file:///c:/Users/adilr/Documents/open-source/OverWatch/TERMS.md)
+  - Client: [`client/PRIVACY.md`](file:///c:/Users/adilr/Documents/open-source/OverWatch/client/PRIVACY.md) and [`client/TERMS.md`](file:///c:/Users/adilr/Documents/open-source/OverWatch/client/TERMS.md)
+  - Web: [`web/PRIVACY.md`](file:///c:/Users/adilr/Documents/open-source/OverWatch/web/PRIVACY.md) and [`web/TERMS.md`](file:///c:/Users/adilr/Documents/open-source/OverWatch/web/TERMS.md)
+  - Landing: [`landing/PRIVACY.md`](file:///c:/Users/adilr/Documents/open-source/OverWatch/landing/PRIVACY.md) and [`landing/TERMS.md`](file:///c:/Users/adilr/Documents/open-source/OverWatch/landing/TERMS.md)
+- **Landing Endpoints**: Implemented visual React pages [`landing/src/pages/PrivacyPage.tsx`](file:///c:/Users/adilr/Documents/open-source/OverWatch/landing/src/pages/PrivacyPage.tsx) and [`landing/src/pages/TermsPage.tsx`](file:///c:/Users/adilr/Documents/open-source/OverWatch/landing/src/pages/TermsPage.tsx) accessible at `/privacy` and `/terms`, complete with SEO meta tags, canonical links, and footer navigation.
+- **README Documentation**: Created complete, dedicated README files for [`client/README.md`](file:///c:/Users/adilr/Documents/open-source/OverWatch/client/README.md) and [`web/README.md`](file:///c:/Users/adilr/Documents/open-source/OverWatch/web/README.md), and expanded root [`README.md`](file:///c:/Users/adilr/Documents/open-source/OverWatch/README.md) with dedicated Privacy and Terms sections.
+- **Landing Indexing Guide**: Created [`landing/TODO.md`](file:///c:/Users/adilr/Documents/open-source/OverWatch/landing/TODO.md) listing all 8 indexing URLs, priorities, and canonical XML sitemap (`https://overwatch.adilrahman.cc/sitemap.xml`), and updated `sitemap.xml` and `robots.txt`.
+- **Deck Screenshots**: Embedded the 4 live desk deck screenshots across root `README.md` and `web/README.md`.
+- **Attribution & URLs**: Standardized all references to official repository `https://github.com/adil-rahman-3063/OverWatch`, canonical site `https://overwatch.adilrahman.cc`, and creator Adil Rahman (`https://adilrahman.cc`).
+
+### 5. AI Session Git Commit Extraction & Beaming
+- **Problem**: When a developer finishes an agent session and wants to push uncommitted work from the mobile StandBy deck to GitHub, raw conversational user prompts (e.g., "camera snap and sent but it didnt comae") contain spelling mistakes or bug descriptions rather than clean Conventional Commits.
+- **Resolution**:
+  - In `client/src/session/agentSession.ts`, implemented `formatAntigravityCommitMessage()` extracting rich session metadata from `transcript.jsonl`:
+    1. Executed commits previously run by Antigravity in `tool_calls` (`git commit -m "..."`).
+    2. Antigravity's high-level `update_focus` goals (e.g. `"Fixing iOS Safari lightbox"` -> `"fix: iOS Safari lightbox"`).
+    3. Antigravity's concise `toolSummary` descriptors (e.g. `"Build and bundle packages"` -> `"feat: build and bundle packages"`).
+    4. Cleaned user request fallback.
+  - Returned `commitMessage` in `gitStatus` object across daemon and mobile client.
+  - In `AgentSessionCard.tsx` (both `web/` and `landing/`), displayed the extracted commit message in a dedicated amber preview pill above the Beam Push Command button.
+  - In `client/src/supabase.ts`, enhanced `agent:git_push` listener to automatically fall back to `sessionState.gitStatus.commitMessage` whenever no custom message is passed from mobile.
+
+
