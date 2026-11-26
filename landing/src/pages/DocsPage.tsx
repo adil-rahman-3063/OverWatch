@@ -39,10 +39,14 @@ export const DocsPage: React.FC = () => {
             <code>git clone https://github.com/adil-rahman-3063/OverWatch.git && cd OverWatch && .\setup.bat</code>
             <button
               onClick={() => copyText('git clone https://github.com/adil-rahman-3063/OverWatch.git && cd OverWatch && .\\setup.bat', 'setup')}
-              className="px-2.5 py-1 rounded bg-[#161622] hover:bg-neutral-800 text-neutral-300 flex items-center gap-1 shrink-0"
+              aria-label="Copy automated workstation setup command"
+              className="px-2.5 py-1 rounded bg-[#161622] hover:bg-neutral-800 text-neutral-300 flex items-center gap-1 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
             >
               {copiedCmd === 'setup' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
               <span>{copiedCmd === 'setup' ? 'Copied' : 'Copy'}</span>
+              <span className="sr-only" aria-live="polite">
+                {copiedCmd === 'setup' ? 'Command copied to clipboard' : ''}
+              </span>
             </button>
           </div>
 
@@ -53,7 +57,7 @@ export const DocsPage: React.FC = () => {
       </section>
 
       {/* STEP 2: Configure Antigravity IDE (The Auto Preset) */}
-      <section className="space-y-4 font-mono text-xs">
+      <section className="space-y-4 font-mono text-xs content-visibility-auto">
         <h2 className="text-lg font-bold text-white uppercase flex items-center gap-2">
           <Settings className="w-4 h-4 text-white" />
           Step 2: Antigravity IDE Configuration (Mobile Interlock Mode)
@@ -91,7 +95,7 @@ export const DocsPage: React.FC = () => {
       </section>
 
       {/* STEP 3: Silent System Tray Companion */}
-      <section className="space-y-4 font-mono text-xs">
+      <section className="space-y-4 font-mono text-xs content-visibility-auto">
         <h2 className="text-lg font-bold text-white uppercase flex items-center gap-2">
           <Monitor className="w-4 h-4 text-white" />
           Step 3: Background System Tray Companion
@@ -110,9 +114,13 @@ export const DocsPage: React.FC = () => {
                 <code>powershell -ExecutionPolicy Bypass -File client/scripts/install-startup.ps1</code>
                 <button
                   onClick={() => copyText('powershell -ExecutionPolicy Bypass -File client/scripts/install-startup.ps1', 'startup')}
-                  className="px-2 py-0.5 rounded bg-[#161622] hover:bg-neutral-800 text-neutral-300 flex items-center gap-1 shrink-0"
+                  aria-label="Copy startup installation command"
+                  className="px-2 py-0.5 rounded bg-[#161622] hover:bg-neutral-800 text-neutral-300 flex items-center gap-1 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                 >
                   {copiedCmd === 'startup' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span className="sr-only" aria-live="polite">
+                    {copiedCmd === 'startup' ? 'Startup command copied to clipboard' : ''}
+                  </span>
                 </button>
               </div>
             </li>
@@ -121,7 +129,7 @@ export const DocsPage: React.FC = () => {
       </section>
 
       {/* STEP 4: Mobile StandBy PWA Setup */}
-      <section className="space-y-4 font-mono text-xs">
+      <section className="space-y-4 font-mono text-xs content-visibility-auto">
         <h2 className="text-lg font-bold text-white uppercase flex items-center gap-2">
           <Smartphone className="w-4 h-4 text-white" />
           Step 4: Mobile StandBy Display Setup
@@ -139,7 +147,7 @@ export const DocsPage: React.FC = () => {
       </section>
 
       {/* FAQ */}
-      <section className="space-y-4 font-mono text-xs">
+      <section className="space-y-4 font-mono text-xs content-visibility-auto">
         <h2 className="text-lg font-bold text-white uppercase flex items-center gap-2">
           <HelpCircle className="w-4 h-4 text-white" />
           Frequently Asked Questions

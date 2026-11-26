@@ -1,6 +1,6 @@
 # OverWatch: The Physical AI Interlock & StandBy Desk Companion
 
-> OverWatch is an open-source physical hardware security interlock and OLED StandBy desk deck for autonomous coding agents (Google Antigravity, Claude Code). It transforms an idle smartphone on a MagSafe stand into an out-of-band physical authorization token and ambient developer workstation monitor.
+> OverWatch is an open-source PhoneBox alternative, physical hardware security interlock, and OLED StandBy desk deck for autonomous coding agents (Google Antigravity, Claude Code). It transforms an idle smartphone on a MagSafe stand into an out-of-band physical authorization token and ambient developer workstation monitor.
 
 - Canonical Website: https://overwatch.adilrahman.cc/
 - GitHub Repository: https://github.com/adil-rahman-3063/OverWatch
@@ -68,6 +68,9 @@ powershell -ExecutionPolicy Bypass -File .\setup.ps1
 ---
 
 ## 5. Frequently Asked Questions (FAQ)
+
+### Is OverWatch an open-source alternative to PhoneBox?
+Yes. OverWatch is a purpose-built, fail-closed open-source PhoneBox alternative (`ersinkoc/phonebox`). While PhoneBox provides an Android dashboard for Claude Code quotas and approvals, OverWatch expands this into a complete physical AI security interlock on local loopback port 49152 with sub-5ms latency, native WinRT media controls, bi-directional Windows clipboard sync, 4 dedicated OLED StandBy surfaces, and support for both Google Antigravity and Claude Code.
 
 ### What happens if my phone dies or Wi-Fi drops?
 OverWatch operates on a strict fail-closed law. If the companion phone is offline, disconnected, or unresponsive for 20 seconds, the IPC hook immediately responds with `decision: "deny"`, safely halting agent execution.

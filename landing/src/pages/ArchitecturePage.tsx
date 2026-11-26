@@ -83,7 +83,7 @@ export const ArchitecturePage: React.FC = () => {
       </section>
 
       {/* 2. THE FAIL-CLOSED LAW */}
-      <section className="space-y-4">
+      <section className="space-y-4 content-visibility-auto">
         <h2 className="text-lg font-mono font-bold text-white uppercase flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-emerald-400" />
           2. The Fail-Closed Security Law
@@ -155,7 +155,7 @@ export const ArchitecturePage: React.FC = () => {
       </section>
 
       {/* 3. LOCAL IPC CONTRACT */}
-      <section className="space-y-4 font-mono text-xs">
+      <section className="space-y-4 font-mono text-xs content-visibility-auto">
         <h2 className="text-lg font-bold text-white uppercase flex items-center gap-2">
           <Server className="w-4 h-4 text-white" />
           3. Local IPC HTTP Endpoints (Port 49152)

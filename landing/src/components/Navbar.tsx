@@ -35,11 +35,11 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onTabChange }) => {
               e.preventDefault();
               onTabChange('home');
             }}
-            className="flex items-center gap-2.5 cursor-pointer group shrink-0"
+            className="flex items-center gap-2.5 cursor-pointer group shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
             title="OverWatch Home"
           >
             <div className="w-7 h-7 rounded-lg bg-[#0c0c10] border border-[#202028] flex items-center justify-center p-1.5 group-hover:border-white transition-colors">
-              <img src="/icon.svg" alt="OverWatch Logo" width="28" height="28" className="w-full h-full object-contain invert" />
+              <img src="/icon.svg" alt="OverWatch Logo" width="28" height="28" {...({ fetchpriority: 'high' } as any)} className="w-full h-full object-contain invert" />
             </div>
             <span className="font-mono font-bold text-xs sm:text-sm tracking-wider uppercase text-white">
               OverWatch
@@ -58,7 +58,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onTabChange }) => {
                     e.preventDefault();
                     onTabChange(item.id);
                   }}
-                  className={`transition-colors py-1 relative ${
+                  className={`transition-colors py-1 relative rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black ${
                     isActive
                       ? 'text-white font-medium'
                       : 'text-neutral-400 hover:text-white'
@@ -79,7 +79,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onTabChange }) => {
               href="https://github.com/adil-rahman-3063/OverWatch"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-lg bg-white hover:bg-neutral-200 text-black font-semibold transition-all text-xs shadow-sm active:scale-95"
+              className="flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-lg bg-white hover:bg-neutral-200 text-black font-semibold transition-all text-xs shadow-sm active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
               title="View OverWatch on GitHub"
             >
               <GithubIcon className="w-3.5 h-3.5" />
@@ -103,7 +103,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onTabChange }) => {
                   onTabChange(item.id);
                   if (navigator.vibrate) navigator.vibrate(15);
                 }}
-                className={`flex flex-col items-center justify-center py-1 px-1.5 rounded-xl transition-all min-w-[46px] ${
+                className={`flex flex-col items-center justify-center py-1 px-1.5 rounded-xl transition-all min-w-[46px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white ${
                   isActive
                     ? 'text-white'
                     : 'text-neutral-500 hover:text-neutral-300'

@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Navbar } from './components/Navbar.tsx';
 import { Footer } from './components/Footer.tsx';
 import { HomePage } from './pages/HomePage.tsx';
-import { ArchitecturePage } from './pages/ArchitecturePage.tsx';
-import { ChangelogPage } from './pages/ChangelogPage.tsx';
-import { DocsPage } from './pages/DocsPage.tsx';
-import { ShowcasePage } from './pages/ShowcasePage.tsx';
-import { DeveloperPage } from './pages/DeveloperPage.tsx';
-import { PrivacyPage } from './pages/PrivacyPage.tsx';
-import { TermsPage } from './pages/TermsPage.tsx';
+
+// Code-split secondary routes for PageSpeed Insights LCP/TBT optimization
+const ArchitecturePage = lazy(() => import('./pages/ArchitecturePage.tsx').then(m => ({ default: m.ArchitecturePage })));
+const ChangelogPage = lazy(() => import('./pages/ChangelogPage.tsx').then(m => ({ default: m.ChangelogPage })));
+const DocsPage = lazy(() => import('./pages/DocsPage.tsx').then(m => ({ default: m.DocsPage })));
+const ShowcasePage = lazy(() => import('./pages/ShowcasePage.tsx').then(m => ({ default: m.ShowcasePage })));
+const DeveloperPage = lazy(() => import('./pages/DeveloperPage.tsx').then(m => ({ default: m.DeveloperPage })));
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage.tsx').then(m => ({ default: m.PrivacyPage })));
+const TermsPage = lazy(() => import('./pages/TermsPage.tsx').then(m => ({ default: m.TermsPage })));
 
 // Mapping of clean URL paths to tab identifiers
 const PATH_TO_TAB: Record<string, string> = {
@@ -46,8 +48,8 @@ const BASE_DOMAIN = 'https://overwatch.adilrahman.cc';
 // SEO metadata per page for search engines and indexing crawlers
 const PAGE_META: Record<string, { title: string; description: string }> = {
   home: {
-    title: 'OverWatch • Physical AI Interlock & StandBy Desk Deck',
-    description: 'Turn an idle smartphone into a dedicated OLED hardware interlock and StandBy deck for autonomous coding agents with fail-closed security.',
+    title: 'OverWatch • Open-Source PhoneBox Alternative & Physical AI Interlock',
+    description: 'The premier open-source PhoneBox alternative. Turn an idle smartphone into a dedicated OLED hardware interlock and StandBy deck for autonomous coding agents with fail-closed security.',
   },
   architecture: {
     title: 'System Architecture & Fail-Closed Security • OverWatch',
@@ -165,6 +167,14 @@ export default function App() {
         '@context': 'https://schema.org',
         '@type': 'FAQPage',
         'mainEntity': [
+          {
+            '@type': 'Question',
+            'name': 'Is OverWatch an open-source alternative to PhoneBox?',
+            'acceptedAnswer': {
+              '@type': 'Answer',
+              'text': 'Yes. OverWatch is a purpose-built, fail-closed open-source PhoneBox alternative (ersinkoc/phonebox). While PhoneBox provides an Android monitor for Claude Code approvals and quotas, OverWatch expands this into a complete physical AI security interlock on local loopback port 49152 with sub-5ms latency, native WinRT media controls, bi-directional Windows clipboard sync, 4 dedicated OLED StandBy surfaces, and support for both Google Antigravity and Claude Code.',
+            },
+          },
           {
             '@type': 'Question',
             'name': 'What happens if my phone battery dies or Wi-Fi drops?',
@@ -305,16 +315,25 @@ export default function App() {
   };
 
   const handleTabChange = (tab: string) => {
-    setCurrentTab(tab);
-    const targetPath = TAB_TO_PATH[tab] || '/';
+    const applyChange = () => {
+      setCurrentTab(tab);
+      const targetPath = TAB_TO_PATH[tab] || '/';
 
-    // Push clean URL to browser history (enables indexing and browser back/forward)
-    if (window.location.pathname !== targetPath) {
-      window.history.pushState({ tab }, '', targetPath);
+      // Push clean URL to browser history (enables indexing and browser back/forward)
+      if (window.location.pathname !== targetPath) {
+        window.history.pushState({ tab }, '', targetPath);
+      }
+
+      updatePageMetadata(tab);
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    };
+
+    // Native Baseline View Transitions API for smooth cross-page state transitions
+    if (typeof document !== 'undefined' && 'startViewTransition' in document) {
+      (document as any).startViewTransition(applyChange);
+    } else {
+      applyChange();
     }
-
-    updatePageMetadata(tab);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Sync with browser back and forward buttons
@@ -322,8 +341,17 @@ export default function App() {
     const handlePopState = () => {
       const path = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
       const matchedTab = PATH_TO_TAB[path] || 'home';
-      setCurrentTab(matchedTab);
-      updatePageMetadata(matchedTab);
+
+      const applyPop = () => {
+        setCurrentTab(matchedTab);
+        updatePageMetadata(matchedTab);
+      };
+
+      if (typeof document !== 'undefined' && 'startViewTransition' in document) {
+        (document as any).startViewTransition(applyPop);
+      } else {
+        applyPop();
+      }
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -351,16 +379,23 @@ export default function App() {
       {/* Pinned Navigation Bar */}
       <Navbar currentTab={currentTab} onTabChange={handleTabChange} />
 
-      {/* Main Tab Content */}
+      {/* Main Tab Content with Lazy Suspense Boundary */}
       <main className="flex-1 w-full pb-20 md:pb-0">
-        {currentTab === 'home' && <HomePage onTabChange={handleTabChange} />}
-        {currentTab === 'architecture' && <ArchitecturePage />}
-        {currentTab === 'changelog' && <ChangelogPage />}
-        {currentTab === 'docs' && <DocsPage />}
-        {currentTab === 'showcase' && <ShowcasePage />}
-        {currentTab === 'developer' && <DeveloperPage />}
-        {currentTab === 'privacy' && <PrivacyPage onTabChange={handleTabChange} />}
-        {currentTab === 'terms' && <TermsPage onTabChange={handleTabChange} />}
+        <Suspense fallback={
+          <div className="min-h-[50vh] flex flex-col items-center justify-center gap-3 font-mono text-xs text-neutral-500">
+            <div className="w-5 h-5 rounded-full border border-neutral-800 border-t-white animate-spin" />
+            <span className="tracking-widest uppercase text-[10px]">Loading module...</span>
+          </div>
+        }>
+          {currentTab === 'home' && <HomePage onTabChange={handleTabChange} />}
+          {currentTab === 'architecture' && <ArchitecturePage />}
+          {currentTab === 'changelog' && <ChangelogPage />}
+          {currentTab === 'docs' && <DocsPage />}
+          {currentTab === 'showcase' && <ShowcasePage />}
+          {currentTab === 'developer' && <DeveloperPage />}
+          {currentTab === 'privacy' && <PrivacyPage onTabChange={handleTabChange} />}
+          {currentTab === 'terms' && <TermsPage onTabChange={handleTabChange} />}
+        </Suspense>
       </main>
 
       {/* Footer */}

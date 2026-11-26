@@ -1,6 +1,7 @@
 import React from 'react';
 import { Smartphone, Monitor, BatteryCharging, Volume2, Sparkles, Sliders, ArrowUpRight } from 'lucide-react';
 import { AdsterraBanner } from '../components/AdsterraBanner.tsx';
+import { getSharedAudioContext } from '../components/deck/sound.ts';
 
 export const ShowcasePage: React.FC = () => {
   return (
@@ -76,7 +77,7 @@ export const ShowcasePage: React.FC = () => {
             <button
               onClick={() => {
                 try {
-                  const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+                  const ctx = getSharedAudioContext();
                   if (ctx.state === 'suspended') ctx.resume();
                   const t = ctx.currentTime;
                   const bufferSize = Math.floor(ctx.sampleRate * 0.022);
@@ -115,7 +116,8 @@ export const ShowcasePage: React.FC = () => {
                   osc.stop(t + 0.025);
                 } catch {}
               }}
-              className="px-4 py-2 rounded-xl bg-white hover:bg-neutral-200 text-black font-mono font-semibold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md w-full sm:w-auto"
+              className="px-4 py-2 rounded-xl bg-white hover:bg-neutral-200 text-black font-mono font-semibold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md w-full sm:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+              aria-label="Play 2600Hz Web Audio mechanical synthesis test sound"
             >
               <Volume2 className="w-4 h-4" />
               <span>Tap to Test 2600Hz Web Audio Synthesis</span>

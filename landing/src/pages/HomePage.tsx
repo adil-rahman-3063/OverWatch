@@ -19,7 +19,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onTabChange }) => {
       {/* 1. HERO SECTION */}
       <section className="max-w-5xl mx-auto px-4 sm:px-6 text-center space-y-6 sm:space-y-8">
         {/* Editorial Eyebrow (No generic AI pill badge) */}
-        <div className="flex items-center justify-center gap-2 sm:gap-3 font-mono text-[11px] sm:text-xs uppercase tracking-widest text-neutral-500 select-none">
+        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 font-mono text-[11px] sm:text-xs uppercase tracking-widest text-neutral-500 select-none">
+          <span className="text-neutral-300 font-semibold">Open-Source PhoneBox Alternative</span>
+          <span className="text-neutral-700">/</span>
           <span className="text-neutral-400">Hardware Interlock</span>
           <span className="text-neutral-700">/</span>
           <span className="text-neutral-400">OLED StandBy</span>
@@ -69,7 +71,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onTabChange }) => {
                 setCopiedInstall(true);
                 setTimeout(() => setCopiedInstall(false), 2000);
               }}
-              className="px-4 py-2 sm:py-1.5 rounded-lg bg-white hover:bg-neutral-200 text-black font-semibold shrink-0 flex items-center justify-center gap-1.5 transition-all text-xs"
+              aria-label="Copy quickstart command to clipboard"
+              className="px-4 py-2 sm:py-1.5 rounded-lg bg-white hover:bg-neutral-200 text-black font-semibold shrink-0 flex items-center justify-center gap-1.5 transition-all text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
             >
               {copiedInstall ? (
                 <>
@@ -82,6 +85,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onTabChange }) => {
                   <span>Copy Quickstart</span>
                 </>
               )}
+              <span className="sr-only" aria-live="polite">
+                {copiedInstall ? 'Quickstart command copied to clipboard' : ''}
+              </span>
             </button>
           </div>
           <p className="text-[10px] sm:text-[11px] font-mono text-neutral-500 mt-2 text-center">
@@ -102,7 +108,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onTabChange }) => {
       <AdsterraBanner />
 
       {/* 2. THE 4 STANDBY SCREENS */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 content-visibility-auto">
         <div className="border-t border-[#181822] pt-16 space-y-12">
           <div className="max-w-2xl space-y-2">
             <span className="font-mono text-xs uppercase tracking-widest text-neutral-500">01 / The Operating System</span>
@@ -116,7 +122,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onTabChange }) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Screen 1: Mechanical Split-Flap Clock */}
-            <div className="p-6 rounded-2xl bg-[#070709] border border-[#1a1a24] space-y-4">
+            <div className="p-6 rounded-2xl bg-[#070709] border border-[#1a1a24] space-y-4 cq-card">
               <div className="flex items-center justify-between font-mono text-xs">
                 <span className="text-white font-bold flex items-center gap-2">
                   <Clock className="w-4 h-4 text-white" />
@@ -194,7 +200,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onTabChange }) => {
       <AdsterraBanner />
 
       {/* 3. STRICT FAIL-CLOSED SECURITY SPECIFICATION */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 content-visibility-auto">
         <div className="border-t border-[#181822] pt-16">
           <div className="p-8 rounded-2xl bg-[#09090c] border border-[#22222e] grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
             <div className="md:col-span-2 space-y-4">
@@ -252,7 +258,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onTabChange }) => {
       </section>
 
       {/* 4. NATURAL-LANGUAGE FREQUENTLY ASKED QUESTIONS */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 content-visibility-auto">
         <div className="border-t border-[#181822] pt-16 space-y-8">
           <div className="max-w-2xl space-y-2">
             <span className="font-mono text-xs uppercase tracking-widest text-neutral-500">03 / Frequently Asked Questions</span>
@@ -265,6 +271,16 @@ export const HomePage: React.FC<HomePageProps> = ({ onTabChange }) => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-sans">
+            <div className="p-5 rounded-2xl bg-[#07070a] border border-[#1a1a24] space-y-2 md:col-span-2">
+              <h3 className="font-mono font-bold text-white text-sm flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                Is OverWatch an open-source alternative to PhoneBox?
+              </h3>
+              <p className="text-neutral-400 leading-relaxed">
+                Yes. OverWatch is built as a purpose-built, fail-closed open-source alternative to PhoneBox (<code className="text-neutral-300 font-mono">ersinkoc/phonebox</code>). While PhoneBox provides an Android status monitor for Claude Code approvals and quotas, OverWatch expands this into a full physical AI security interlock on local loopback port 49152 with sub-5ms latency, native WinRT media controls, bi-directional Windows clipboard sync, 4 dedicated OLED StandBy surfaces, and native out-of-the-box support for both Google Antigravity and Claude Code.
+              </p>
+            </div>
+
             <div className="p-5 rounded-2xl bg-[#07070a] border border-[#1a1a24] space-y-2">
               <h3 className="font-mono font-bold text-white text-sm">
                 What happens if my phone battery dies or Wi-Fi drops?
