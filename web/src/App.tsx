@@ -62,6 +62,8 @@ export default function App() {
   const [requests, setRequests] = useState<PermissionRequest[]>([]);
   const [quota, setQuota] = useState<QuotaData>({});
   const [pcClipboardText, setPcClipboardText] = useState<string>('');
+  const [lanIp, setLanIp] = useState<string>('127.0.0.1');
+  const [localPort, setLocalPort] = useState<number>(49152);
 
   const channelRef = useRef<any>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -190,8 +192,10 @@ export default function App() {
 
     channelRef.current = channel;
 
-    channel.on('broadcast', { event: 'client:heartbeat' }, () => {
+    channel.on('broadcast', { event: 'client:heartbeat' }, ({ payload }) => {
       setLastSeenPc(Date.now());
+      if (payload?.lanIp) setLanIp(payload.lanIp);
+      if (payload?.localPort) setLocalPort(payload.localPort);
     });
 
     channel.on('broadcast', { event: 'media:state' }, ({ payload }) => {
@@ -368,6 +372,94 @@ export default function App() {
         payload: {},
       });
     }
+  };
+
+  const handleBeamImage = async (imageBase64: string): Promise<{ success: boolean; mode?: string }> => {
+    // 1. Try Local Wi-Fi Direct first (instant, full resolution)
+    if (lanIp && lanIp !== '127.0.0.1') {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const res = await fetch(`http://${lanIp}:${localPort}/image/upload`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageBase64 }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+          return { success: true, mode: 'wifi-direct' };
+        }
+      } catch (e) {
+        console.warn('[ImageBeam] Wi-Fi direct unreachable, falling back to Supabase broadcast');
+      }
+    }
+
+    // 2. Cellular / Cloud Fallback via Supabase Realtime broadcast
+    if (channelRef.current) {
+      await channelRef.current.send({
+        type: 'broadcast',
+        event: 'image:beam',
+        payload: { imageBase64, timestamp: Date.now() },
+      });
+      return { success: true, mode: 'cellular-fallback' };
+    }
+
+    return { success: false };
+  };
+
+  const handleFetchPcClipboardImage = async (): Promise<{ hasImage: boolean; base64?: string }> => {
+    // 1. Try Wi-Fi Direct
+    if (lanIp && lanIp !== '127.0.0.1') {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const res = await fetch(`http://${lanIp}:${localPort}/image/clipboard`, {
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+          return await res.json();
+        }
+      } catch {}
+    }
+
+    // 2. Fallback via Supabase broadcast
+    if (channelRef.current) {
+      await channelRef.current.send({
+        type: 'broadcast',
+        event: 'image:request_clipboard',
+        payload: {},
+      });
+    }
+    return { hasImage: false };
+  };
+
+  const handleCapturePcScreen = async (): Promise<{ success: boolean; base64?: string }> => {
+    // 1. Try Wi-Fi Direct
+    if (lanIp && lanIp !== '127.0.0.1') {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 7000);
+        const res = await fetch(`http://${lanIp}:${localPort}/image/screenshot`, {
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+          return await res.json();
+        }
+      } catch {}
+    }
+
+    // 2. Fallback via Supabase broadcast
+    if (channelRef.current) {
+      await channelRef.current.send({
+        type: 'broadcast',
+        event: 'image:request_screen',
+        payload: {},
+      });
+    }
+    return { success: false };
   };
 
   const handleSendAgentPrompt = async (prompt: string, autoSend: boolean, workspaceOverride?: string) => {

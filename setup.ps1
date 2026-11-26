@@ -244,8 +244,8 @@ if (-not $Yes) {
         }
         
         Start-Sleep -Seconds 2
-        Write-Host "  ✓ OverWatch is now running silently in your Windows System Tray!" -ForegroundColor Green
-        Write-Host "  💡 Tip: If you don't see the shield icon on your taskbar, click the '^' arrow next to your clock." -ForegroundColor Yellow
-        Write-Host "  💡 Tip: You can also run 'start-client.bat' anytime if you prefer a visible console terminal." -ForegroundColor DarkGray
+        Write-Host "  [OK] OverWatch is now running silently in your Windows System Tray!" -ForegroundColor Green
+        Write-Host "  [Tip] If you do not see the shield icon on your taskbar, click the up arrow (^) next to your clock." -ForegroundColor Yellow
+        Write-Host "  [Tip] You can also run start-client.bat anytime if you prefer a visible console terminal." -ForegroundColor DarkGray
     }
 }

@@ -8,6 +8,12 @@ import { AntigravityQuotaData } from './quota/antigravityQuota.js';
 import { SystemStats, executeMacro } from './system/pcStats.js';
 import { AgentSessionState, agentSessionMonitor } from './session/agentSession.js';
 import { setWindowsClipboard, getWindowsClipboard } from './system/clipboard.js';
+import {
+  getPrimaryLanIp,
+  saveImageAndSetClipboard,
+  getWindowsClipboardImage,
+  capturePrimaryScreen,
+} from './system/imageClipboard.js';
 
 export interface PendingRequest {
   id: string;
@@ -203,6 +209,65 @@ export class SupabaseService {
       await this.publishHeartbeat();
     });
 
+    // 9. Image Beam: Mobile -> Windows (Cellular / Cloud Broadcast Fallback)
+    this.channel.on('broadcast', { event: 'image:beam' }, async ({ payload }) => {
+      let b64 = payload?.imageBase64 || payload?.image || '';
+      if (typeof b64 === 'string' && b64.includes('base64,')) {
+        b64 = b64.split('base64,')[1];
+      }
+      if (b64 && typeof b64 === 'string') {
+        const buffer = Buffer.from(b64, 'base64');
+        const res = await saveImageAndSetClipboard(buffer, payload?.name);
+        if (this.channel) {
+          await this.channel.send({
+            type: 'broadcast',
+            event: 'image:beamed_status',
+            payload: {
+              success: res.success,
+              filePath: res.filePath,
+              message: res.success
+                ? 'Image beamed to Windows Clipboard and saved to Pictures/OverWatch'
+                : 'Failed to save image: ' + res.error,
+              timestamp: new Date().toISOString(),
+            },
+          });
+        }
+      }
+    });
+
+    // 10. Image Beam: Mobile requests Windows Clipboard Image
+    this.channel.on('broadcast', { event: 'image:request_clipboard' }, async () => {
+      const clipResult = await getWindowsClipboardImage();
+      if (this.channel) {
+        await this.channel.send({
+          type: 'broadcast',
+          event: 'image:clipboard_state',
+          payload: {
+            hasImage: clipResult.hasImage,
+            base64: clipResult.base64,
+            timestamp: new Date().toISOString(),
+          },
+        });
+      }
+    });
+
+    // 11. Image Beam: Mobile requests Screen Capture
+    this.channel.on('broadcast', { event: 'image:request_screen' }, async () => {
+      const screenResult = await capturePrimaryScreen();
+      if (this.channel) {
+        await this.channel.send({
+          type: 'broadcast',
+          event: 'image:screen_state',
+          payload: {
+            success: screenResult.success,
+            base64: screenResult.base64,
+            filePath: screenResult.filePath,
+            timestamp: new Date().toISOString(),
+          },
+        });
+      }
+    });
+
     this.channel.subscribe((status) => {
       console.log(`[Supabase] Realtime channel status: ${status}`);
       if (status === 'SUBSCRIBED') {
@@ -316,6 +381,8 @@ export class SupabaseService {
           event: 'client:heartbeat',
           payload: {
             deviceId: config.deviceId,
+            lanIp: getPrimaryLanIp(),
+            localPort: config.localIpcPort,
             timestamp: Date.now(),
           },
         });
