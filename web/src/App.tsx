@@ -67,6 +67,8 @@ export default function App() {
 
   const channelRef = useRef<any>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const clipboardImageResolversRef = useRef<Array<(data: { hasImage: boolean; base64?: string }) => void>>([]);
+  const screenImageResolversRef = useRef<Array<(data: { success: boolean; base64?: string }) => void>>([]);
 
   // =========================================================================
   // 1. Bulletproof Screen Wake Lock (Native API + Silent Video Keep-Alive)
@@ -235,6 +237,30 @@ export default function App() {
       }
     });
 
+    channel.on('broadcast', { event: 'image:clipboard_state' }, ({ payload }) => {
+      setLastSeenPc(Date.now());
+      const resolvers = clipboardImageResolversRef.current;
+      clipboardImageResolversRef.current = [];
+      resolvers.forEach((res) =>
+        res({
+          hasImage: Boolean(payload?.hasImage),
+          base64: payload?.base64,
+        })
+      );
+    });
+
+    channel.on('broadcast', { event: 'image:screen_state' }, ({ payload }) => {
+      setLastSeenPc(Date.now());
+      const resolvers = screenImageResolversRef.current;
+      screenImageResolversRef.current = [];
+      resolvers.forEach((res) =>
+        res({
+          success: Boolean(payload?.success),
+          base64: payload?.base64,
+        })
+      );
+    });
+
     channel.on('broadcast', { event: 'session:state' }, ({ payload }) => {
       setLastSeenPc(Date.now());
       if (payload?.session) {
@@ -374,12 +400,43 @@ export default function App() {
     }
   };
 
+  // Helper to ensure beamed images never exceed the 256KB Supabase WebSocket limit
+  const compressImageForBroadcast = (dataUrl: string, maxDim = 1280, quality = 0.75): Promise<string> => {
+    return new Promise((resolve) => {
+      if (!dataUrl.startsWith('data:image/') || dataUrl.length < 120000) {
+        return resolve(dataUrl);
+      }
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve(dataUrl);
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
+  };
+
   const handleBeamImage = async (imageBase64: string): Promise<{ success: boolean; mode?: string }> => {
     // 1. Try Local Wi-Fi Direct first (instant, full resolution)
     if (lanIp && lanIp !== '127.0.0.1') {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const timeoutId = setTimeout(() => controller.abort(), 3500);
         const res = await fetch(`http://${lanIp}:${localPort}/image/upload`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -397,10 +454,11 @@ export default function App() {
 
     // 2. Cellular / Cloud Fallback via Supabase Realtime broadcast
     if (channelRef.current) {
+      const payloadImage = await compressImageForBroadcast(imageBase64, 1280, 0.75);
       await channelRef.current.send({
         type: 'broadcast',
         event: 'image:beam',
-        payload: { imageBase64, timestamp: Date.now() },
+        payload: { imageBase64: payloadImage, timestamp: Date.now() },
       });
       return { success: true, mode: 'cellular-fallback' };
     }
@@ -413,7 +471,7 @@ export default function App() {
     if (lanIp && lanIp !== '127.0.0.1') {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
         const res = await fetch(`http://${lanIp}:${localPort}/image/clipboard`, {
           signal: controller.signal,
         });
@@ -424,14 +482,30 @@ export default function App() {
       } catch {}
     }
 
-    // 2. Fallback via Supabase broadcast
+    // 2. Fallback via Supabase broadcast (await response)
     if (channelRef.current) {
-      await channelRef.current.send({
-        type: 'broadcast',
-        event: 'image:request_clipboard',
-        payload: {},
+      return new Promise<{ hasImage: boolean; base64?: string }>((resolve) => {
+        const timeout = setTimeout(() => {
+          clipboardImageResolversRef.current = clipboardImageResolversRef.current.filter((r) => r !== resolve);
+          resolve({ hasImage: false });
+        }, 10000);
+
+        clipboardImageResolversRef.current.push((result) => {
+          clearTimeout(timeout);
+          resolve(result);
+        });
+
+        channelRef.current?.send({
+          type: 'broadcast',
+          event: 'image:request_clipboard',
+          payload: { timestamp: Date.now() },
+        }).catch(() => {
+          clearTimeout(timeout);
+          resolve({ hasImage: false });
+        });
       });
     }
+
     return { hasImage: false };
   };
 
@@ -440,7 +514,7 @@ export default function App() {
     if (lanIp && lanIp !== '127.0.0.1') {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 7000);
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
         const res = await fetch(`http://${lanIp}:${localPort}/image/screenshot`, {
           signal: controller.signal,
         });
@@ -451,14 +525,30 @@ export default function App() {
       } catch {}
     }
 
-    // 2. Fallback via Supabase broadcast
+    // 2. Fallback via Supabase broadcast (await response)
     if (channelRef.current) {
-      await channelRef.current.send({
-        type: 'broadcast',
-        event: 'image:request_screen',
-        payload: {},
+      return new Promise<{ success: boolean; base64?: string }>((resolve) => {
+        const timeout = setTimeout(() => {
+          screenImageResolversRef.current = screenImageResolversRef.current.filter((r) => r !== resolve);
+          resolve({ success: false });
+        }, 12000);
+
+        screenImageResolversRef.current.push((result) => {
+          clearTimeout(timeout);
+          resolve(result);
+        });
+
+        channelRef.current?.send({
+          type: 'broadcast',
+          event: 'image:request_screen',
+          payload: { timestamp: Date.now() },
+        }).catch(() => {
+          clearTimeout(timeout);
+          resolve({ success: false });
+        });
       });
     }
+
     return { success: false };
   };
 

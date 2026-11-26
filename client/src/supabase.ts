@@ -211,13 +211,21 @@ export class SupabaseService {
 
     // 9. Image Beam: Mobile -> Windows (Cellular / Cloud Broadcast Fallback)
     this.channel.on('broadcast', { event: 'image:beam' }, async ({ payload }) => {
+      console.log(`[ImageBeam] Incoming image from mobile device...`);
       let b64 = payload?.imageBase64 || payload?.image || '';
       if (typeof b64 === 'string' && b64.includes('base64,')) {
         b64 = b64.split('base64,')[1];
       }
       if (b64 && typeof b64 === 'string') {
         const buffer = Buffer.from(b64, 'base64');
+        console.log(`[ImageBeam] Decoded ${Math.round(buffer.length / 1024)} KB image payload.`);
         const res = await saveImageAndSetClipboard(buffer, payload?.name);
+        if (res.success) {
+          console.log(`[ImageBeam] ✓ Saved image to: ${res.filePath}`);
+          console.log(`[ImageBeam] ✓ Windows Clipboard updated (Ready to Ctrl+V)!`);
+        } else {
+          console.error(`[ImageBeam] ✗ Failed: ${res.error}`);
+        }
         if (this.channel) {
           await this.channel.send({
             type: 'broadcast',
@@ -237,7 +245,9 @@ export class SupabaseService {
 
     // 10. Image Beam: Mobile requests Windows Clipboard Image
     this.channel.on('broadcast', { event: 'image:request_clipboard' }, async () => {
+      console.log(`[ImageBeam] Mobile requested current Windows clipboard image...`);
       const clipResult = await getWindowsClipboardImage();
+      console.log(`[ImageBeam] Clipboard has image: ${clipResult.hasImage}`);
       if (this.channel) {
         await this.channel.send({
           type: 'broadcast',
@@ -248,12 +258,17 @@ export class SupabaseService {
             timestamp: new Date().toISOString(),
           },
         });
+        if (clipResult.hasImage) {
+          console.log(`[ImageBeam] Beamed clipboard image to mobile!`);
+        }
       }
     });
 
     // 11. Image Beam: Mobile requests Screen Capture
     this.channel.on('broadcast', { event: 'image:request_screen' }, async () => {
+      console.log(`[ImageBeam] Mobile requested primary desktop screen capture...`);
       const screenResult = await capturePrimaryScreen();
+      console.log(`[ImageBeam] Screen capture complete: success=${screenResult.success}`);
       if (this.channel) {
         await this.channel.send({
           type: 'broadcast',
@@ -265,6 +280,7 @@ export class SupabaseService {
             timestamp: new Date().toISOString(),
           },
         });
+        console.log(`[ImageBeam] Beamed desktop screenshot to mobile!`);
       }
     });
 

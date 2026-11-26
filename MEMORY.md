@@ -380,3 +380,28 @@ To ensure that anyone cloning the repository has an effortless, 1-click setup ex
    - Ignores runtime bypass flags (`.overwatch_disabled`).
 3. **Verified Clean Build Pipeline**: Verified that `client/`, `web/`, and `landing/` build from scratch with zero errors (`tsc && vite build`).
 
+---
+
+## Log Entry: DPI-Aware Screen Capture, Dark HUD Toast, Browser Auto-Downloads & Sequential Multi-Image Beaming
+**Date:** November 26, 2026 — 12:10 IST  
+**Topic:** High-DPI Desktop Capture Resolution, Windows HUD Toast Chime, Mobile File Downloads & Multi-Image Beaming
+
+### 1. High-DPI Display Scaling Fix for Screen Capture
+- **Root Cause**: PowerShell runs in DPI-unaware mode by default. On Windows 10/11 displays configured with display scaling (125%, 150%, 200%), `[System.Windows.Forms.Screen]::PrimaryScreen.Bounds` reported virtual scaled dimensions (e.g. 1280 x 800) rather than native physical resolution (1920 x 1200). As a result, `CopyFromScreen` copied only the top-left quadrant of the screen.
+- **Resolution**: Added P/Invoke `[Win32.DpiFix]::SetProcessDPIAware()` from `user32.dll` prior to capturing screen bounds. The primary monitor resolution is now read accurately at full unscaled resolution (1920 x 1200), capturing the entire desktop screen flawlessly. Full-res PNG is archived to `Pictures/OverWatch/Screenshots/snip_*.png`, and a 75% quality JPEG (<150KB) is beamed to mobile.
+
+### 2. Windows Visual Toast HUD & Notification Chime
+- **Root Cause**: Modern Windows 11 updates restrict raw WinRT `ToastNotificationManager.CreateToastNotifier()` calls from unpackaged Win32 processes, failing with error `0x80073D54: The process has no package identity`. Additionally, temporary `NotifyIcon` instances disposed without an active message pump (`Application.DoEvents()`) are suppressed by Windows 11 Action Center.
+- **Resolution**: Built an in-process, non-focus-stealing dark HUD toast banner (`Form.ShowWithoutActivation`) styled with OverWatch's OLED dark aesthetic (`#121216` background, `#14F195` emerald title) positioned at the bottom right above the taskbar, paired with native audio chime `[System.Media.SystemSounds]::Asterisk.Play()` and tray balloon notification.
+
+### 3. Mobile Browser Automatic Image Downloads
+- When the mobile user triggers **PC Clipboard** or **Capture Screen**:
+  - Added Promise-based broadcast resolvers in `web/src/App.tsx` that await the incoming `image:clipboard_state` or `image:screen_state` payloads over Supabase Realtime when Wi-Fi Direct is blocked by HTTPS Mixed Content.
+  - In `ClipboardBeam.tsx` (both `web/` and `landing/`), receiving the image automatically initiates a browser file download (`pc_clipboard_<timestamp>.jpg` / `pc_screenshot_<timestamp>.jpg`) directly to the phone's gallery/downloads folder, while keeping the preview and lightbox accessible.
+
+### 4. Multiple Image Selection & One-by-One Sequential Beaming
+- **Multi-Image Selection**: Added `multiple` support to the file picker, allowing users to select several gallery photos at once.
+- **Queued Thumbnail Reel**: Displays a horizontal scrolling carousel of queued images with `#1`, `#2`, `#3` badge counters, individual `(x)` remove buttons, and an inline `[+ Add]` button to append more photos or snaps to the queue.
+- **Sequential One-by-One Beaming**: Beams images sequentially with animated progress (`Beaming 2 of 4...`) and a brief 500ms settling interval between transmissions. Each image is assigned a unique millisecond timestamp on disk (`beam_YYYY-MM-DDTHH-mm-ss_ms_rand.png`), avoiding file overwrites and leaving the Windows Clipboard primed with the final image.
+- **Payload Compression Guard**: Added client-side HTML5 canvas compression in `web/src/App.tsx` ensuring high-res mobile photos (often 5-15MB) are downsampled to max 1280px / 0.75 JPEG, effortlessly remaining below Supabase Realtime's 256KB WebSocket ceiling.
+

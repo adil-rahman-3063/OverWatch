@@ -12,7 +12,9 @@ import {
   X,
   Wifi,
   Radio,
-  Maximize2
+  Maximize2,
+  Plus,
+  Layers
 } from 'lucide-react';
 
 export interface ClipboardBeamProps {
@@ -42,9 +44,10 @@ export const ClipboardBeam: React.FC<ClipboardBeamProps> = ({
   const [beamed, setBeamed] = useState(false);
   const [copiedPhone, setCopiedPhone] = useState(false);
 
-  // Image Beam State
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  // Image Beam State (Supports multiple images queued and beamed sequentially one by one)
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [beamingImage, setBeamingImage] = useState(false);
+  const [beamingProgress, setBeamingProgress] = useState<{ current: number; total: number } | null>(null);
   const [imageBeamed, setImageBeamed] = useState(false);
   const [beamModeUsed, setBeamModeUsed] = useState<string>('');
 
@@ -77,42 +80,68 @@ export const ClipboardBeam: React.FC<ClipboardBeamProps> = ({
   };
 
   // -------------------------------------------------------------
-  // Image Selection Handlers
+  // Image Selection Handlers (Multiple Selection & Queue)
   // -------------------------------------------------------------
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setSelectedImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    const reads = files.map((file) => {
+      return new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+    });
+    Promise.all(reads).then((newImgs) => {
+      setSelectedImages((prev) => [...prev, ...newImgs]);
+    });
+    if (e.target) e.target.value = '';
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setSelectedImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleBeamImageToPc = async () => {
-    if (!selectedImage) return;
+    if (selectedImages.length === 0) return;
     setBeamingImage(true);
-    try {
-      if (onBeamImage) {
-        const res = await onBeamImage(selectedImage);
-        if (res.success) {
-          setImageBeamed(true);
-          setBeamModeUsed(res.mode === 'wifi-direct' ? 'Wi-Fi Direct' : 'Cellular Broadcast');
-          if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
-          setTimeout(() => {
-            setImageBeamed(false);
-          }, 2000);
+    let lastMode = '';
+    let successCount = 0;
+
+    for (let i = 0; i < selectedImages.length; i++) {
+      setBeamingProgress({ current: i + 1, total: selectedImages.length });
+      try {
+        if (onBeamImage) {
+          const res = await onBeamImage(selectedImages[i]);
+          if (res.success) {
+            successCount++;
+            lastMode = res.mode === 'wifi-direct' ? 'Wi-Fi Direct' : 'Cellular Broadcast';
+          }
+        } else {
+          await new Promise((r) => setTimeout(r, 450));
+          successCount++;
+          lastMode = 'Wi-Fi Direct';
         }
-      } else {
-        // Showcase simulation
-        await new Promise((r) => setTimeout(r, 600));
-        setImageBeamed(true);
-        setBeamModeUsed('Wi-Fi Direct');
-        setTimeout(() => setImageBeamed(false), 2000);
+      } catch (err) {
+        console.warn(`[ImageBeam] Failed beaming image #${i + 1}:`, err);
       }
-    } catch {}
+      if (i < selectedImages.length - 1) {
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    }
+
+    setBeamingProgress(null);
     setBeamingImage(false);
+
+    if (successCount > 0) {
+      setImageBeamed(true);
+      setBeamModeUsed(lastMode);
+      if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+      setTimeout(() => {
+        setImageBeamed(false);
+        setSelectedImages([]);
+      }, 2500);
+    }
   };
 
   // -------------------------------------------------------------
@@ -124,9 +153,18 @@ export const ClipboardBeam: React.FC<ClipboardBeamProps> = ({
       if (onFetchPcClipboardImage) {
         const res = await onFetchPcClipboardImage();
         if (res.hasImage && res.base64) {
-          const src = res.base64.startsWith('data:') ? res.base64 : `data:image/png;base64,${res.base64}`;
+          const src = res.base64.startsWith('data:') ? res.base64 : `data:image/jpeg;base64,${res.base64}`;
           setReceivedImage(src);
           setReceivedImageType('clipboard');
+
+          // Auto-download to phone/device browser
+          const link = document.createElement('a');
+          link.href = src;
+          link.download = `pc_clipboard_${Date.now()}.jpg`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
         }
       } else {
         // Showcase simulation
@@ -144,9 +182,18 @@ export const ClipboardBeam: React.FC<ClipboardBeamProps> = ({
       if (onCapturePcScreen) {
         const res = await onCapturePcScreen();
         if (res.success && res.base64) {
-          const src = res.base64.startsWith('data:') ? res.base64 : `data:image/png;base64,${res.base64}`;
+          const src = res.base64.startsWith('data:') ? res.base64 : `data:image/jpeg;base64,${res.base64}`;
           setReceivedImage(src);
           setReceivedImageType('screen');
+
+          // Auto-download to phone/device browser
+          const link = document.createElement('a');
+          link.href = src;
+          link.download = `pc_screenshot_${Date.now()}.jpg`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
         }
       } else {
         // Showcase simulation
@@ -327,6 +374,7 @@ export const ClipboardBeam: React.FC<ClipboardBeamProps> = ({
               ref={fileInputRef}
               type="file"
               accept="image/*"
+              multiple
               className="hidden"
               onChange={handleFileChange}
             />
@@ -340,52 +388,100 @@ export const ClipboardBeam: React.FC<ClipboardBeamProps> = ({
             />
 
             {/* Image Preview Box or Action Pickers */}
-            {selectedImage ? (
-              <div className="relative rounded-lg border border-[#23232c] bg-[#07070a] p-1.5 flex items-center gap-2">
-                <img
-                  src={selectedImage}
-                  alt="Selected"
-                  className="w-14 h-14 object-cover rounded bg-black border border-neutral-800 shrink-0"
-                />
-                <div className="flex-1 min-w-0 flex flex-col justify-between h-14 py-0.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono text-neutral-300 truncate">
-                      Ready to beam
-                    </span>
+            {selectedImages.length > 0 ? (
+              <div className="rounded-lg border border-[#23232c] bg-[#07070a] p-2 space-y-2">
+                {/* Header row inside card */}
+                <div className="flex items-center justify-between text-[10px] font-mono">
+                  <div className="flex items-center gap-1.5 text-neutral-300">
+                    <Layers className="w-3 h-3 text-cyan-400" />
+                    <span>{selectedImages.length} {selectedImages.length === 1 ? 'image' : 'images'} queued</span>
+                  </div>
+                  <div className="flex items-center gap-2">
                     <button
-                      onClick={() => setSelectedImage(null)}
-                      className="p-0.5 rounded text-neutral-500 hover:text-neutral-300"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={beamingImage}
+                      className="text-neutral-400 hover:text-white flex items-center gap-0.5 text-[9px]"
+                      title="Add more photos"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      <Plus className="w-2.5 h-2.5" />
+                      <span>Add</span>
+                    </button>
+                    <button
+                      onClick={() => setSelectedImages([])}
+                      disabled={beamingImage}
+                      className="text-neutral-500 hover:text-red-400 text-[9px]"
+                    >
+                      Clear
                     </button>
                   </div>
-
-                  <button
-                    onClick={handleBeamImageToPc}
-                    disabled={beamingImage}
-                    className={`w-full h-7 rounded text-[10px] font-mono font-medium flex items-center justify-center gap-1 transition-all active:scale-95 ${
-                      imageBeamed
-                        ? 'bg-emerald-500 text-black'
-                        : beamingImage
-                        ? 'bg-neutral-800 text-neutral-400 animate-pulse'
-                        : 'bg-white text-black hover:bg-neutral-200'
-                    }`}
-                  >
-                    {imageBeamed ? (
-                      <>
-                        <Check className="w-3 h-3" />
-                        <span>Beamed ({beamModeUsed})!</span>
-                      </>
-                    ) : beamingImage ? (
-                      <span>Beaming...</span>
-                    ) : (
-                      <>
-                        <Send className="w-3 h-3" />
-                        <span>Beam to Windows (Ctrl+V)</span>
-                      </>
-                    )}
-                  </button>
                 </div>
+
+                {/* Horizontal Scrolling Thumbnail Reel */}
+                <div className="flex items-center gap-2 overflow-x-auto py-0.5 no-scrollbar">
+                  {selectedImages.map((img, idx) => (
+                    <div key={idx} className="relative shrink-0 group">
+                      <img
+                        src={img}
+                        alt={`Selected #${idx + 1}`}
+                        className="w-12 h-12 object-cover rounded bg-black border border-neutral-800"
+                      />
+                      {!beamingImage && (
+                        <button
+                          onClick={() => handleRemoveImage(idx)}
+                          className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-neutral-900 border border-neutral-700 text-neutral-400 hover:text-white hover:border-red-400 flex items-center justify-center transition-colors"
+                          title="Remove image"
+                        >
+                          <X className="w-2.5 h-2.5" />
+                        </button>
+                      )}
+                      <span className="absolute bottom-0.5 right-0.5 px-1 rounded bg-black/80 text-[7px] font-mono text-neutral-300 border border-neutral-800">
+                        #{idx + 1}
+                      </span>
+                    </div>
+                  ))}
+                  {!beamingImage && (
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-12 h-12 rounded border border-dashed border-[#262630] hover:border-neutral-500 bg-[#09090d] flex flex-col items-center justify-center text-neutral-500 hover:text-neutral-300 shrink-0 transition-colors"
+                      title="Add more photos"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span className="text-[7.5px] font-mono">Add</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Main Beam Action Button */}
+                <button
+                  onClick={handleBeamImageToPc}
+                  disabled={beamingImage}
+                  className={`w-full h-8 rounded-lg text-[10px] font-mono font-medium flex items-center justify-center gap-1.5 transition-all active:scale-95 ${
+                    imageBeamed
+                      ? 'bg-emerald-500 text-black'
+                      : beamingImage
+                      ? 'bg-neutral-800 text-neutral-300 border border-neutral-700'
+                      : 'bg-white text-black hover:bg-neutral-200'
+                  }`}
+                >
+                  {imageBeamed ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>All {selectedImages.length} Beamed ({beamModeUsed})!</span>
+                    </>
+                  ) : beamingImage && beamingProgress ? (
+                    <>
+                      <div className="w-2.5 h-2.5 rounded-full border border-neutral-400 border-t-white animate-spin" />
+                      <span>Beaming {beamingProgress.current} of {beamingProgress.total}...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-3 h-3" />
+                      <span>
+                        Beam {selectedImages.length === 1 ? 'Image' : `${selectedImages.length} Images`} to Windows (Ctrl+V)
+                      </span>
+                    </>
+                  )}
+                </button>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-1.5">
@@ -401,7 +497,7 @@ export const ClipboardBeam: React.FC<ClipboardBeamProps> = ({
                   className="h-12 rounded-lg bg-[#07070a] border border-[#1e1e24] hover:border-neutral-600 flex flex-col items-center justify-center gap-0.5 text-neutral-300 hover:text-white transition-all active:scale-95"
                 >
                   <ImageIcon className="w-4 h-4 text-blue-400" />
-                  <span className="text-[10px] font-mono font-medium">Choose Photo</span>
+                  <span className="text-[10px] font-mono font-medium">Select Photos</span>
                 </button>
               </div>
             )}
