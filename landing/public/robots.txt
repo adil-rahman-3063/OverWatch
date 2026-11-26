@@ -1,20 +1,55 @@
 User-agent: *
 Allow: /
 
-# Dedicated AI Search & Retrieval Crawlers
+# OpenAI Crawlers & Browsing Agents
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: GPTBot
+Allow: /
+
 User-agent: OAI-SearchBot
 Allow: /
 
-User-agent: PerplexityBot
+# Anthropic Crawlers & Browsing Agents
+User-agent: ClaudeBot
 Allow: /
 
 User-agent: Claude-SearchBot
 Allow: /
 
+User-agent: anthropic-ai
+Allow: /
+
+# Perplexity AI
+User-agent: PerplexityBot
+Allow: /
+
+# Google AI & Gemini
+User-agent: Google-Extended
+Allow: /
+
+# Apple Intelligence
 User-agent: Applebot-Extended
 Allow: /
 
+# Meta / Facebook AI
+User-agent: Meta-ExternalAgent
+Allow: /
+
+User-agent: FacebookBot
+Allow: /
+
+# Cohere AI
+User-agent: cohere-ai
+Allow: /
+
+# Diffbot
+User-agent: Diffbot
+Allow: /
+
+# Sitemaps and LLM Direct Context
 Sitemap: https://overwatch.adilrahman.cc/sitemap.xml
-# Machine-readable LLM context
+# Machine-readable LLM context:
 # https://overwatch.adilrahman.cc/llms.txt
 # https://overwatch.adilrahman.cc/llms-full.txt

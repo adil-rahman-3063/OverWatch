@@ -33,6 +33,8 @@
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <link rel="canonical" href="https://overwatch.adilrahman.cc/" />
+    <link rel="alternate" type="text/markdown" title="OverWatch LLM Context" href="/llms.txt" />
+    <link rel="alternate" type="text/markdown" title="OverWatch Full LLM Context" href="/llms-full.txt" />
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
@@ -133,7 +135,98 @@
     <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-MSLC5B76"
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <!-- End Google Tag Manager (noscript) -->
-    <div id="root" class="min-h-screen flex flex-col"></div>
+    <div id="root" class="min-h-screen flex flex-col">
+      <!-- Semantic Static Fallback for AI Agents, Web Crawlers & No-JS Clients -->
+      <header style="padding: 1rem 1.5rem; border-bottom: 1px solid #1a1a24; display: flex; justify-content: space-between; align-items: center;">
+        <div style="font-weight: bold; font-family: monospace; font-size: 1rem;">OverWatch</div>
+        <nav style="display: flex; gap: 1rem; font-family: monospace; font-size: 0.8rem;">
+          <a href="/" style="color: #ffffff;">Home</a>
+          <a href="/architecture" style="color: #a1a1aa;">Architecture</a>
+          <a href="/docs" style="color: #a1a1aa;">Docs</a>
+          <a href="/changelog" style="color: #a1a1aa;">Changelog</a>
+          <a href="/showcase" style="color: #a1a1aa;">Showcase</a>
+          <a href="/developer" style="color: #a1a1aa;">Developer</a>
+          <a href="https://github.com/adil-rahman-3063/OverWatch" style="color: #a1a1aa;">GitHub</a>
+        </nav>
+      </header>
+
+      <main style="max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem;">
+        <article>
+          <p style="font-family: monospace; font-size: 0.75rem; text-transform: uppercase; color: #a1a1aa;">
+            Open-Source PhoneBox Alternative / AI Hardware Interlock / OLED StandBy Desk Deck (v1.2.0)
+          </p>
+          <h1 style="font-size: 2.5rem; font-family: monospace; font-weight: bold; margin: 1rem 0; color: #ffffff;">
+            The Physical AI Interlock For Coding Agents
+          </h1>
+          <p style="font-size: 1.1rem; line-height: 1.6; color: #a1a1aa; margin-bottom: 1.5rem;">
+            OverWatch is an open-source PhoneBox alternative that turns an idle smartphone on your desk into a dedicated OLED hardware interlock and StandBy companion. It intercepts terminal tool calls on local loopback port 49152 with sub-5ms latency, enforces a strict 20-second fail-closed security boundary, and controls workstation media and clipboard.
+          </p>
+
+          <section style="background: #09090c; border: 1px solid #22222e; padding: 1.25rem; border-radius: 0.75rem; margin-bottom: 2rem;">
+            <h2 style="font-size: 0.85rem; font-family: monospace; text-transform: uppercase; color: #34d399; margin-bottom: 0.5rem;">
+              Definition: What is an AI Hardware Interlock?
+            </h2>
+            <p style="font-size: 0.9rem; line-height: 1.5; color: #d4d4d8;">
+              An <strong>AI hardware interlock</strong> is an out-of-band physical security token that isolates autonomous agent authorization from the primary computer screen. By intercepting PreToolUse hooks over local loopback IPC (<code>127.0.0.1:49152</code>) and streaming approval prompts to an external OLED desk deck, it guarantees commands fail closed on timeout or disconnect without desktop popup fatigue.
+            </p>
+          </section>
+
+          <section style="margin-bottom: 2rem;">
+            <h2 style="font-size: 1.25rem; font-family: monospace; color: #ffffff; margin-bottom: 0.75rem;">
+              Quickstart Installation
+            </h2>
+            <pre style="background: #09090c; border: 1px solid #22222e; padding: 1rem; border-radius: 0.5rem; font-family: monospace; overflow-x: auto; color: #f4f4f5;">git clone https://github.com/adil-rahman-3063/OverWatch.git &amp;&amp; cd OverWatch &amp;&amp; .\setup.bat</pre>
+            <p style="font-size: 0.8rem; color: #71717a; margin-top: 0.5rem;">Prerequisites: Windows 10/11, Node.js 18+, Git</p>
+          </section>
+
+          <section style="margin-bottom: 2rem;">
+            <h2 style="font-size: 1.25rem; font-family: monospace; color: #ffffff; margin-bottom: 1rem;">
+              The Four Dedicated OLED StandBy Screens
+            </h2>
+            <ol style="line-height: 1.8; color: #d4d4d8;">
+              <li><strong>Screen 01: Mechanical Split-Flap Clock &amp; Focus Timer</strong> - 3D CSS mechanical flip clock with zero-latency 2600Hz Web Audio synthesized plastic flap clicks and customizable sprint timer.</li>
+              <li><strong>Screen 02: AI Mission Control &amp; Hardware Interlock</strong> - Live agent session status (model, tokens, goal, active tool), audible approval chime, and 1-tap Allow/Deny buttons.</li>
+              <li><strong>Screen 03: Windows GSMTC Media &amp; Telemetry</strong> - Native Windows media transport controls scoped to active session indices (Spotify, YouTube Music) and live CPU/RAM gauges.</li>
+              <li><strong>Screen 04: Workstation Macros &amp; Universal Clipboard Beam</strong> - Bi-directional text and image beaming between smartphone and Windows PC with 1-tap lock and terminal launch shortcuts.</li>
+            </ol>
+          </section>
+
+          <section style="margin-bottom: 2rem;">
+            <h2 style="font-size: 1.25rem; font-family: monospace; color: #ffffff; margin-bottom: 1rem;">
+              Frequently Asked Questions (FAQ)
+            </h2>
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+              <div>
+                <h3 style="font-size: 1rem; color: #ffffff; margin-bottom: 0.25rem;">Is OverWatch an open-source alternative to PhoneBox?</h3>
+                <p style="font-size: 0.9rem; color: #a1a1aa; line-height: 1.5;">Yes. OverWatch is a purpose-built, fail-closed open-source PhoneBox alternative (ersinkoc/phonebox). While PhoneBox provides an Android monitor for Claude Code approvals and quotas, OverWatch expands this into a full physical AI security interlock on local loopback port 49152 with sub-5ms latency, native WinRT media controls, bi-directional Windows clipboard sync, 4 dedicated OLED StandBy surfaces, and support for both Google Antigravity and Claude Code.</p>
+              </div>
+              <div>
+                <h3 style="font-size: 1rem; color: #ffffff; margin-bottom: 0.25rem;">What happens if my phone battery dies or Wi-Fi drops?</h3>
+                <p style="font-size: 0.9rem; color: #a1a1aa; line-height: 1.5;">OverWatch operates on a strict fail-closed security law. If the companion phone is offline, disconnected, or unanswered for 20 seconds, the local IPC hook immediately responds with decision: deny, safely terminating terminal execution.</p>
+              </div>
+              <div>
+                <h3 style="font-size: 1rem; color: #ffffff; margin-bottom: 0.25rem;">Does OverWatch send my source code or terminal commands to cloud databases?</h3>
+                <p style="font-size: 0.9rem; color: #a1a1aa; line-height: 1.5;">No. OverWatch uses an ephemeral, broadcast-only Supabase Realtime WebSocket channel (overwatch:{device_id}). Payloads exist in volatile memory only during the active approval window and are purged immediately upon decision. Zero code is logged to disk in the cloud.</p>
+              </div>
+              <div>
+                <h3 style="font-size: 1rem; color: #ffffff; margin-bottom: 0.25rem;">Which AI coding agents and CLI tools are supported?</h3>
+                <p style="font-size: 0.9rem; color: #a1a1aa; line-height: 1.5;">Native support is provided for Google Antigravity (via Auto mode permissions) and Claude Code CLI. Any autonomous agent supporting stdin/stdout JSON lifecycle hooks can integrate directly with the local IPC server.</p>
+              </div>
+            </div>
+          </section>
+
+          <footer style="margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid #1a1a24; font-size: 0.8rem; color: #71717a; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+            <div>© 2026 OverWatch • Created by <a href="https://adilrahman.cc" style="color: #a1a1aa;">Adil Rahman</a></div>
+            <div style="display: flex; gap: 1rem;">
+              <a href="/privacy" style="color: #a1a1aa;">Privacy Policy</a>
+              <a href="/terms" style="color: #a1a1aa;">Terms of Service</a>
+              <a href="/llms.txt" style="color: #a1a1aa;">llms.txt</a>
+              <a href="/llms-full.txt" style="color: #a1a1aa;">llms-full.txt</a>
+            </div>
+          </footer>
+        </article>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
