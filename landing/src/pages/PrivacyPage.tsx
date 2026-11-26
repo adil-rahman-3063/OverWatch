@@ -11,13 +11,17 @@ export const PrivacyPage: React.FC<PrivacyPageProps> = ({ onTabChange }) => {
       {/* Header */}
       <div className="space-y-3">
         {onTabChange && (
-          <button
-            onClick={() => onTabChange('home')}
-            className="inline-flex items-center gap-1.5 text-xs font-mono text-neutral-400 hover:text-white mb-2 transition-colors"
+          <a
+            href="/"
+            onClick={(e) => {
+              e.preventDefault();
+              onTabChange('home');
+            }}
+            className="inline-flex items-center gap-1.5 text-xs font-mono text-neutral-400 hover:text-white mb-2 transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Back to Live Deck</span>
-          </button>
+          </a>
         )}
         <div className="flex items-center gap-2">
           <span className="font-mono text-xs uppercase tracking-widest text-emerald-400 bg-emerald-950/40 border border-emerald-900/60 px-2 py-0.5 rounded">

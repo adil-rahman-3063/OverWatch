@@ -4,6 +4,7 @@ import {
   Clock, Music, Zap, Lock, FolderGit2, UploadCloud, Radio 
 } from 'lucide-react';
 import { LiveDeckSimulator } from '../components/LiveDeckSimulator.tsx';
+import { AdsterraBanner } from '../components/AdsterraBanner.tsx';
 
 interface HomePageProps {
   onTabChange: (tab: string) => void;
@@ -11,7 +12,7 @@ interface HomePageProps {
 
 export const HomePage: React.FC<HomePageProps> = ({ onTabChange }) => {
   const [copiedInstall, setCopiedInstall] = useState(false);
-  const installCmd = 'git clone https://github.com/AdilR/OverWatch.git && cd OverWatch && .\\setup.bat';
+  const installCmd = 'git clone https://github.com/adil-rahman-3063/OverWatch.git && cd OverWatch && .\\setup.bat';
 
   return (
     <div className="space-y-16 sm:space-y-24 py-8 sm:py-12">
@@ -86,6 +87,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onTabChange }) => {
           <LiveDeckSimulator />
         </div>
       </section>
+
+      {/* Adsterra Banner 1 of 3 (Post-Hero) */}
+      <AdsterraBanner />
 
       {/* 2. THE 4 STANDBY SCREENS */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6">
@@ -176,6 +180,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onTabChange }) => {
         </div>
       </section>
 
+      {/* Adsterra Banner 2 of 3 (Mid-Page) */}
+      <AdsterraBanner />
+
       {/* 3. STRICT FAIL-CLOSED SECURITY SPECIFICATION */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="border-t border-[#181822] pt-16">
@@ -218,17 +225,24 @@ export const HomePage: React.FC<HomePageProps> = ({ onTabChange }) => {
                   {"}"}
                 </code>
               </div>
-              <button
-                onClick={() => onTabChange('architecture')}
+              <a
+                href="/architecture"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onTabChange('architecture');
+                }}
                 className="w-full py-2 rounded bg-white text-black font-bold flex items-center justify-center gap-1.5 hover:bg-neutral-200 transition-colors"
               >
                 <span>Read Full Security Spec</span>
                 <ArrowRight className="w-3.5 h-3.5" />
-              </button>
+              </a>
             </div>
           </div>
         </div>
       </section>
+
+      {/* Adsterra Banner 3 of 3 (Pre-Footer) */}
+      <AdsterraBanner />
     </div>
   );
 };

@@ -70,13 +70,24 @@ const PAGE_META: Record<string, { title: string; description: string }> = {
     description: 'About Adil Rahman (adilrahman.cc), software engineer and builder of OverWatch. Dedicated to autonomous agent tooling and physical cyberdecks.',
   },
   privacy: {
-    title: 'Privacy Policy • OverWatch',
+    title: 'Privacy Policy & Zero-Telemetry Data Governance • OverWatch',
     description: 'Zero telemetry, local-first privacy policy and data governance for OverWatch.',
   },
   terms: {
-    title: 'Terms of Service & License • OverWatch',
+    title: 'Terms of Service & MIT Open-Source License • OverWatch',
     description: 'Terms of service, open-source MIT license, and user agreement for OverWatch.',
   },
+};
+
+const PAGE_NAMES: Record<string, string> = {
+  home: 'Home',
+  architecture: 'Architecture & Security',
+  changelog: 'Changelog',
+  docs: 'Documentation & Setup',
+  showcase: 'Desk Showcase',
+  developer: 'Developer Profile',
+  privacy: 'Privacy Policy',
+  terms: 'Terms of Service',
 };
 
 export default function App() {
@@ -107,6 +118,9 @@ export default function App() {
     }
     metaDesc.setAttribute('content', meta.description);
 
+    const cleanPath = TAB_TO_PATH[tab] || '/';
+    const canonicalUrl = `${BASE_DOMAIN}${cleanPath}`;
+
     // Update canonical link to overwatch.adilrahman.cc
     let canonical = document.querySelector('link[rel="canonical"]');
     if (!canonical) {
@@ -114,8 +128,54 @@ export default function App() {
       canonical.setAttribute('rel', 'canonical');
       document.head.appendChild(canonical);
     }
-    const cleanPath = TAB_TO_PATH[tab] || '/';
-    canonical.setAttribute('href', `${BASE_DOMAIN}${cleanPath}`);
+    canonical.setAttribute('href', canonicalUrl);
+
+    // Sync Open Graph & Twitter metadata for social previews and link expanders
+    const setMetaTag = (selector: string, attr: string, value: string) => {
+      let tag = document.querySelector(selector);
+      if (tag) {
+        tag.setAttribute('content', value);
+      }
+    };
+
+    setMetaTag('meta[property="og:title"]', 'content', meta.title);
+    setMetaTag('meta[property="og:description"]', 'content', meta.description);
+    setMetaTag('meta[property="og:url"]', 'content', canonicalUrl);
+    setMetaTag('meta[name="twitter:title"]', 'content', meta.title);
+    setMetaTag('meta[name="twitter:description"]', 'content', meta.description);
+    setMetaTag('meta[name="twitter:url"]', 'content', canonicalUrl);
+
+    // Dynamic JSON-LD BreadcrumbList structured data schema
+    let breadcrumbScript = document.getElementById('breadcrumb-schema') as HTMLScriptElement | null;
+    if (tab === 'home') {
+      if (breadcrumbScript) breadcrumbScript.remove();
+    } else {
+      if (!breadcrumbScript) {
+        breadcrumbScript = document.createElement('script');
+        breadcrumbScript.id = 'breadcrumb-schema';
+        breadcrumbScript.type = 'application/ld+json';
+        document.head.appendChild(breadcrumbScript);
+      }
+      const breadcrumbData = {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        'itemListElement': [
+          {
+            '@type': 'ListItem',
+            'position': 1,
+            'name': 'Home',
+            'item': `${BASE_DOMAIN}/`,
+          },
+          {
+            '@type': 'ListItem',
+            'position': 2,
+            'name': PAGE_NAMES[tab] || meta.title,
+            'item': canonicalUrl,
+          },
+        ],
+      };
+      breadcrumbScript.textContent = JSON.stringify(breadcrumbData);
+    }
   };
 
   const handleTabChange = (tab: string) => {

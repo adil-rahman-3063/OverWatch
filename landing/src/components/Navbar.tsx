@@ -39,7 +39,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onTabChange }) => {
             title="OverWatch Home"
           >
             <div className="w-7 h-7 rounded-lg bg-[#0c0c10] border border-[#202028] flex items-center justify-center p-1.5 group-hover:border-white transition-colors">
-              <img src="/icon.svg" alt="OverWatch Logo" className="w-full h-full object-contain invert" />
+              <img src="/icon.svg" alt="OverWatch Logo" width="28" height="28" className="w-full h-full object-contain invert" />
             </div>
             <span className="font-mono font-bold text-xs sm:text-sm tracking-wider uppercase text-white">
               OverWatch
@@ -76,7 +76,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onTabChange }) => {
           {/* Right Action: Clean GitHub Repository Link (No star badge) */}
           <div className="flex items-center gap-2 font-mono text-xs">
             <a
-              href="https://github.com/AdilR/OverWatch"
+              href="https://github.com/adil-rahman-3063/OverWatch"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-lg bg-white hover:bg-neutral-200 text-black font-semibold transition-all text-xs shadow-sm active:scale-95"

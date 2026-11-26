@@ -35,9 +35,9 @@ export const DocsPage: React.FC = () => {
           </p>
 
           <div className="p-3 rounded-xl bg-[#040406] border border-[#1e1e28] flex items-center justify-between text-neutral-200">
-            <code>git clone https://github.com/AdilR/OverWatch.git && cd OverWatch && .\setup.bat</code>
+            <code>git clone https://github.com/adil-rahman-3063/OverWatch.git && cd OverWatch && .\setup.bat</code>
             <button
-              onClick={() => copyText('git clone https://github.com/AdilR/OverWatch.git && cd OverWatch && .\\setup.bat', 'setup')}
+              onClick={() => copyText('git clone https://github.com/adil-rahman-3063/OverWatch.git && cd OverWatch && .\\setup.bat', 'setup')}
               className="px-2.5 py-1 rounded bg-[#161622] hover:bg-neutral-800 text-neutral-300 flex items-center gap-1 shrink-0"
             >
               {copiedCmd === 'setup' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}

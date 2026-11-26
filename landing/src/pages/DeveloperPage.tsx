@@ -10,8 +10,8 @@ const GithubIcon = ({ className = 'w-4 h-4' }: { className?: string }) => (
 
 export const DeveloperPage: React.FC = () => {
   const portfolioUrl = 'https://adilrahman.cc?utm_source=overwatch&utm_medium=referral&utm_campaign=creator_link';
-  const githubUrl = 'https://github.com/AdilR';
-  const repoUrl = 'https://github.com/AdilR/OverWatch';
+  const githubUrl = 'https://github.com/adil-rahman-3063';
+  const repoUrl = 'https://github.com/adil-rahman-3063/OverWatch';
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12 space-y-16">
@@ -62,7 +62,7 @@ export const DeveloperPage: React.FC = () => {
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#0e0e14] hover:bg-[#181822] border border-[#242432] text-neutral-300 hover:text-white transition-all active:scale-95"
             >
               <GithubIcon className="w-3.5 h-3.5" />
-              <span>@AdilR</span>
+              <span>@adil-rahman-3063</span>
             </a>
           </div>
         </div>

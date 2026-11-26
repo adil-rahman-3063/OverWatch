@@ -1,0 +1,25 @@
+# OverWatch
+
+> Open-source physical hardware AI interlock and OLED StandBy desk companion for autonomous coding agents (Google Antigravity, Claude Code).
+
+## Core Capabilities
+- **Fail-Closed AI Interlock**: Intercepts terminal tool executions via PreToolUse lifecycle hooks on local port 49152. Commands require explicit approval on a mobile phone desk stand. Unanswered prompts time out in 20 seconds and fail closed.
+- **StandBy OLED Cyberdeck**: Four glanceable 100dvh screens (Mechanical Split-Flap Clock, AI Mission Control, Windows GSMTC Media Telemetry, Workstation Macros & Universal Clipboard Beam).
+- **Zero-Distraction Philosophy**: OLED #000000 true black, zero persistent cloud logging, Web Audio synthesized mechanical audio, and dual-layer screen wake lock.
+
+## Key URLs
+- Canonical Site: https://overwatch.adilrahman.cc/
+- Architecture & Security Model: https://overwatch.adilrahman.cc/architecture
+- Documentation & Setup: https://overwatch.adilrahman.cc/docs
+- Release Changelog: https://overwatch.adilrahman.cc/changelog
+- Desk Showcase: https://overwatch.adilrahman.cc/showcase
+- Creator Portfolio: https://overwatch.adilrahman.cc/developer
+- Privacy Policy: https://overwatch.adilrahman.cc/privacy
+- Terms & License: https://overwatch.adilrahman.cc/terms
+- GitHub Repository: https://github.com/adil-rahman-3063/OverWatch
+- XML Sitemap: https://overwatch.adilrahman.cc/sitemap.xml
+
+## System Architecture & Protocols
+- **Local Daemon**: Node.js + TypeScript listening on `127.0.0.1:49152`.
+- **Relay Pipeline**: Ephemeral Supabase Realtime broadcast channel (`overwatch:{device_id}`).
+- **Native Windows Services**: WinRT GSMTC media session controller, DPI-aware C# screencap utility (`screencap.exe`), and AMSI-safe clipboard integration.

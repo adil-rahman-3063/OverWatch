@@ -21,7 +21,7 @@ export const Footer: React.FC<FooterProps> = ({ onTabChange }) => {
           <div className="md:col-span-1 space-y-3">
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 rounded bg-[#101015] border border-neutral-800 p-1 flex items-center justify-center">
-                <img src="/icon.svg" alt="Logo" className="w-full h-full object-contain invert" />
+                <img src="/icon.svg" alt="OverWatch Logo" width="24" height="24" className="w-full h-full object-contain invert" />
               </div>
               <span className="font-bold text-white tracking-wider uppercase">OVERWATCH</span>
             </div>
