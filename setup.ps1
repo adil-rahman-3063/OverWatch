@@ -230,10 +230,21 @@ if (-not $Yes) {
     if ($launch -eq "" -or $launch -match '^[Yy]') {
         Write-Host "  Starting OverWatch in System Tray..." -ForegroundColor Cyan
         $trayPath = Join-Path $clientDir "scripts\tray.ps1"
-        Start-Process "powershell.exe" -ArgumentList "-STA -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$trayPath`""
+        $vbsPath = Join-Path $clientDir "scripts\silent-launch.vbs"
+        if (Test-Path $vbsPath) {
+            Start-Process "wscript.exe" -ArgumentList "//nologo `"$vbsPath`" `"$trayPath`""
+        } else {
+            $psi = New-Object System.Diagnostics.ProcessStartInfo
+            $psi.FileName = "powershell.exe"
+            $psi.Arguments = "-STA -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$trayPath`""
+            $psi.UseShellExecute = $false
+            $psi.CreateNoWindow = $true
+            $psi.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
+            [System.Diagnostics.Process]::Start($psi) | Out-Null
+        }
         
         Start-Sleep -Seconds 2
-        Write-Host "  ✓ OverWatch is now running in your Windows System Tray!" -ForegroundColor Green
+        Write-Host "  ✓ OverWatch is now running silently in your Windows System Tray!" -ForegroundColor Green
         Write-Host "  💡 Tip: If you don't see the shield icon on your taskbar, click the '^' arrow next to your clock." -ForegroundColor Yellow
         Write-Host "  💡 Tip: You can also run 'start-client.bat' anytime if you prefer a visible console terminal." -ForegroundColor DarkGray
     }

@@ -338,5 +338,6 @@ Following real-world testing on mobile devices in landscape StandBy orientation 
 - **Stream Redirection & Lock Prevention**: Eliminated exclusive file locking on `daemon.log`, preventing `IOException` sharing violations during high-frequency child process output piping.
 - **Port 49152 Conflict Resolution**: Auto-detects and terminates stale processes listening on port 49152 before launching a new instance, preventing `EADDRINUSE` errors.
 - **Auto-Revive Watchdog**: Added a lightweight 5-second health check timer inside the tray loop that automatically restarts the Node daemon if terminated unexpectedly.
+- **Windows 11 Terminal Interception & Zero-Window VBS Launcher**: On Windows 11, when Windows Terminal is the default terminal emulator, running `powershell.exe -WindowStyle Hidden` leaves an empty, blank Windows Terminal window on screen. Created `client/scripts/silent-launch.vbs` which runs via GUI subsystem `wscript.exe` with window mode `0` (`SW_HIDE`), completely bypassing Windows Terminal so OverWatch runs 100% silently with zero windows.
 - **Graceful PreToolUse Hook Pass-Through**: If OverWatch is uninstalled, disabled in `hooks.json`, or the daemon is temporarily offline, the hook exits transparently with code 0 instead of blocking IDE operations.
 

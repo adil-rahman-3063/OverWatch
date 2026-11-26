@@ -1,4 +1,4 @@
-﻿# OverWatch Windows System Tray Companion
+# OverWatch Windows System Tray Companion
 # Runs the OverWatch daemon in the background with a system tray icon, context menu, auto-restart watchdog, and log capture.
 
 Add-Type -AssemblyName System.Windows.Forms

@@ -5,10 +5,11 @@ try {
     $icoPath = Join-Path $PSScriptRoot "..\assets\overwatch.ico"
 
     # Create shortcut in Windows Startup folder to launch silently into System Tray
+    $vbsScript = Join-Path $PSScriptRoot "silent-launch.vbs"
     $wsh = New-Object -ComObject WScript.Shell
     $shortcut = $wsh.CreateShortcut($shortcutPath)
-    $shortcut.TargetPath = "powershell.exe"
-    $shortcut.Arguments = "-STA -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$trayScript`""
+    $shortcut.TargetPath = "wscript.exe"
+    $shortcut.Arguments = "//nologo `"$vbsScript`" `"$trayScript`""
     $shortcut.WorkingDirectory = (Resolve-Path "$PSScriptRoot\..").Path
     $shortcut.Description = "OverWatch Windows Client Daemon (System Tray)"
     if (Test-Path $icoPath) {

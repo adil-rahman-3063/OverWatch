@@ -1,7 +1,7 @@
 @echo off
 :: OverWatch Silent System Tray Launcher
-:: Runs OverWatch in the background with an icon in the Windows notification area (System Tray).
-:: No persistent command prompt window is left open on your screen.
+:: Uses Windows Script Host (wscript.exe) to launch PowerShell in completely hidden mode (SW_HIDE).
+:: Completely bypasses Windows 11 Windows Terminal interception so no blank window is left open.
 
-start "" powershell.exe -STA -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "%~dp0client\scripts\tray.ps1"
+wscript.exe //nologo "%~dp0client\scripts\silent-launch.vbs" "%~dp0client\scripts\tray.ps1"
 exit
