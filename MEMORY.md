@@ -360,3 +360,23 @@ Following real-world testing on mobile devices in landscape StandBy orientation 
 - **Root Cause**: PowerShell's `-EncodedCommand` parameter strictly expects base64-encoded UTF-16LE (Unicode) byte streams. When encoded as UTF-8 in Node.js (`Buffer.from(script, 'utf-8').toString('base64')`), PowerShell decodes byte pairs as corrupted Unicode characters (`++++++??????????4...`), throwing `CommandNotFoundException` during automated prompt entry (`SendKeys`) and script execution.
 - **Resolution**: Updated all `-EncodedCommand` script builders across `supabase.ts` and `imageClipboard.ts` to use `Buffer.from(script, 'utf16le').toString('base64')`, ensuring 100% reliable automated keystroke injection and screen capture.
 
+### 3. Mobile Audio Suspension Keep-Alive & Native WAV Fallback
+- **Root Cause**: Mobile operating systems (iOS Safari and Android Chrome) automatically suspend browser `AudioContext` engines when sitting idle in StandBy mode to conserve battery. When asynchronous approval requests arrive from the network, mobile browser autoplay policies block `ctx.resume()` without an active user gesture, resulting in complete silence.
+- **Resolution**: Implemented a 15-second inaudible keep-alive heartbeat (`gain = 0.00001`), paired with an in-memory 16-bit PCM WAV chime (dual-pulse C6/E6/G6) pre-armed on an HTML5 `<audio>` element during PIN authentication. The alert tone and haptic vibration now ring reliably even after hours of idling.
+
+---
+
+## Log Entry: Repository Hygiene, Strict .gitignore & Clone-Ready Cleanliness
+**Date:** November 26, 2026 — 11:45 IST  
+**Topic:** Open-Source Release Readiness, Artifact Removal & Comprehensive Ignore Policy
+
+To ensure that anyone cloning the repository has an effortless, 1-click setup experience without repository bloat or secrets leakage:
+1. **Removed Dead Code & Deprecated Components**: Deleted unreferenced prototype component `web/src/components/WidgetDeck.tsx`.
+2. **Hardened `.gitignore`**:
+   - Explicitly ignores all environment secrets (`.env`, `.env.local`, `*.env`) while whitelisting `.env.example` templates for instant setup.
+   - Ignores all build artifacts across sub-packages (`dist/`, `build/`, `out/`, `*.tsbuildinfo`).
+   - Ignores runtime and daemon logs (`daemon.log`, `tray-error.log`, `*.log`).
+   - Ignores OS and IDE clutter (`.DS_Store`, `Thumbs.db`, `Desktop.ini`, `.vscode/`, `.idea/`, `*.swp`).
+   - Ignores runtime bypass flags (`.overwatch_disabled`).
+3. **Verified Clean Build Pipeline**: Verified that `client/`, `web/`, and `landing/` build from scratch with zero errors (`tsc && vite build`).
+

@@ -1,31 +1,57 @@
 # Dependencies
 node_modules/
 .pnpm-store/
+jspm_packages/
+.npm/
 
-# Environment and Secrets (CRITICAL: Do NOT commit)
+# Environment, Secrets, and Local Configuration (CRITICAL: Do NOT commit)
 .env
 .env.local
 .env.*.local
 *.env
+!.env.example
 
-# Build outputs
+# Build Outputs & Bundles
 dist/
+dist-ssr/
 build/
+out/
 .next/
 .astro/
+coverage/
+*.tsbuildinfo
 
-# Logs & temp
+# Logs & Diagnostics
 *.log
 npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
+yarn-error.log*
+daemon.log
+tray-error.log
 
-# OS specific
+# Operating System Specific
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+Desktop.ini
 
-# IDE
+# IDE & Editor Configurations
 .idea/
 .vscode/
 *.swp
 *.swo
+*.sublime-project
+*.sublime-workspace
+.project
+.classpath
+.settings/
+
+# Windows Temp, PowerShell & OverWatch runtime flags
+*.tmp
+*.temp
+.overwatch_disabled
