@@ -11,7 +11,7 @@ import { ApprovalOverlay } from './components/ApprovalOverlay.tsx';
 import { PinLock } from './components/PinLock.tsx';
 import { Lock } from 'lucide-react';
 import { AgentSessionState, MediaState, PermissionRequest, QuotaData, SystemStats } from './types.ts';
-import { playAlertRingtone } from './utils/sound.ts';
+import { playAlertRingtone, unlockAudio } from './utils/sound.ts';
 
 // 1-pixel silent base64 MP4 video for iOS/Android keep-awake fallback
 const SILENT_VIDEO_B64 =
@@ -540,7 +540,10 @@ export default function App() {
     return (
       <PinLock
         expectedPin={EXPECTED_PIN}
-        onAuthenticated={() => setIsAuthenticated(true)}
+        onAuthenticated={() => {
+          unlockAudio();
+          setIsAuthenticated(true);
+        }}
       />
     );
   }
