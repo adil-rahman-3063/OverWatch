@@ -31,7 +31,6 @@ export const ClipboardBeam: React.FC<ClipboardBeamProps> = ({
   onFetchClipboard,
   pcClipboardText,
   lanIp = '127.0.0.1',
-  localPort = 49152,
   onBeamImage,
   onFetchPcClipboardImage,
   onCapturePcScreen,

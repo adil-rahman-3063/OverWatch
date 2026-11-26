@@ -128,7 +128,7 @@ export class SupabaseService {
               Start-Sleep -Milliseconds 60;
               $wshell.SendKeys('{ENTER}');
             `;
-            const base64 = Buffer.from(psScript, 'utf-8').toString('base64');
+            const base64 = Buffer.from(psScript, 'utf16le').toString('base64');
             await execPromise(`powershell -NoProfile -NonInteractive -EncodedCommand ${base64}`);
             console.log(`[AgentPrompt] Successfully pasted and submitted prompt.`);
           } catch (err: any) {

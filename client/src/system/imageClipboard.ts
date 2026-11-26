@@ -61,7 +61,7 @@ export async function saveImageAndSetClipboard(
       $stream.Close()
       $stream.Dispose()
     `;
-    const base64 = Buffer.from(psScript, 'utf-8').toString('base64');
+    const base64 = Buffer.from(psScript, 'utf16le').toString('base64');
     await execPromise(`powershell -NoProfile -NonInteractive -STA -EncodedCommand ${base64}`, {
       timeout: 5000,
     });
@@ -78,7 +78,7 @@ export async function saveImageAndSetClipboard(
         Start-Sleep -Milliseconds 1500
         $notify.Dispose()
       `;
-      const balloonBase64 = Buffer.from(balloonScript, 'utf-8').toString('base64');
+      const balloonBase64 = Buffer.from(balloonScript, 'utf16le').toString('base64');
       exec(`powershell -NoProfile -NonInteractive -STA -EncodedCommand ${balloonBase64}`).unref();
     } catch {}
 
@@ -109,7 +109,7 @@ export async function getWindowsClipboardImage(): Promise<{ hasImage: boolean; b
         Write-Output "NO_IMAGE"
       }
     `;
-    const base64Cmd = Buffer.from(psScript, 'utf-8').toString('base64');
+    const base64Cmd = Buffer.from(psScript, 'utf16le').toString('base64');
     const { stdout } = await execPromise(`powershell -NoProfile -NonInteractive -STA -EncodedCommand ${base64Cmd}`, {
       timeout: 6000,
       maxBuffer: 25 * 1024 * 1024,
@@ -162,7 +162,7 @@ export async function capturePrimaryScreen(): Promise<{ success: boolean; base64
       $ms.Close()
       [System.Convert]::ToBase64String($bytes)
     `;
-    const base64Cmd = Buffer.from(psScript, 'utf-8').toString('base64');
+    const base64Cmd = Buffer.from(psScript, 'utf16le').toString('base64');
     const { stdout } = await execPromise(`powershell -NoProfile -NonInteractive -STA -EncodedCommand ${base64Cmd}`, {
       timeout: 8000,
       maxBuffer: 30 * 1024 * 1024,

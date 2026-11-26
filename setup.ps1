@@ -1,4 +1,4 @@
-﻿# ==============================================================================
+# ==============================================================================
 # OverWatch Windows 1-Click All-in-One Setup Script
 # Configures environment, installs packages, builds client & web, registers hooks,
 # and sets up the Windows System Tray companion.

@@ -341,3 +341,22 @@ Following real-world testing on mobile devices in landscape StandBy orientation 
 - **Windows 11 Terminal Interception & Zero-Window VBS Launcher**: On Windows 11, when Windows Terminal is the default terminal emulator, running `powershell.exe -WindowStyle Hidden` leaves an empty, blank Windows Terminal window on screen. Created `client/scripts/silent-launch.vbs` which runs via GUI subsystem `wscript.exe` with window mode `0` (`SW_HIDE`), completely bypassing Windows Terminal so OverWatch runs 100% silently with zero windows.
 - **Graceful PreToolUse Hook Pass-Through**: If OverWatch is uninstalled, disabled in `hooks.json`, or the daemon is temporarily offline, the hook exits transparently with code 0 instead of blocking IDE operations.
 
+---
+
+## Log Entry: Bidirectional Image Beaming & PowerShell UTF-16LE EncodedCommand Fix
+**Date:** November 26, 2026 — 11:35 IST  
+**Topic:** Mobile ⇄ Windows Image Beaming (Wi-Fi Direct + Cellular Fallback) & PowerShell Character Encoding
+
+### 1. Bidirectional Image Beaming (Mobile ⇄ Windows)
+- **Wi-Fi Direct Local Transfer**: OverWatch daemon listens on `0.0.0.0:49152` and advertises its LAN IPv4 via Supabase heartbeats. Transfers between phone and PC on the same network stream directly via HTTP POST/GET for full resolution, zero compression, and sub-second speed.
+- **Automatic Cellular Fallback**: If Wi-Fi direct is unreachable, images fall back automatically to compressed WebP beamed across the Supabase Realtime broadcast channel.
+- **Mobile → Windows Handling**: Incoming images are set onto the Windows Clipboard as a bitmap (Ctrl+V ready for IDE/chat) AND saved to `c:\Users\<user>\Pictures\OverWatch\beam_*.png`.
+- **Windows → Mobile Handling**:
+  - `Fetch PC Clipboard Image`: Pulls whatever image was copied on Windows (<kbd>Win</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> or browser copy) directly to mobile.
+  - `Capture PC Screen`: 1-tap captures the primary desktop monitor and renders a preview on mobile with a save/download button and fullscreen lightbox.
+- **Mobile UI**: Re-engineered `ClipboardBeam.tsx` into a dual-mode `[ Text | Image ]` card with camera snap (`capture="environment"`), file picker, and desktop capture preview. Mirrored in `landing/` showcase deck.
+
+### 2. PowerShell `-EncodedCommand` UTF-16LE Encoding Fix
+- **Root Cause**: PowerShell's `-EncodedCommand` parameter strictly expects base64-encoded UTF-16LE (Unicode) byte streams. When encoded as UTF-8 in Node.js (`Buffer.from(script, 'utf-8').toString('base64')`), PowerShell decodes byte pairs as corrupted Unicode characters (`++++++??????????4...`), throwing `CommandNotFoundException` during automated prompt entry (`SendKeys`) and script execution.
+- **Resolution**: Updated all `-EncodedCommand` script builders across `supabase.ts` and `imageClipboard.ts` to use `Buffer.from(script, 'utf16le').toString('base64')`, ensuring 100% reliable automated keystroke injection and screen capture.
+

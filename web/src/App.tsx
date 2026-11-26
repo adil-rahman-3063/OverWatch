@@ -722,6 +722,11 @@ export default function App() {
                   onBeamText={handleBeamText}
                   onFetchClipboard={handleFetchClipboard}
                   pcClipboardText={pcClipboardText}
+                  lanIp={lanIp}
+                  localPort={localPort}
+                  onBeamImage={handleBeamImage}
+                  onFetchPcClipboardImage={handleFetchPcClipboardImage}
+                  onCapturePcScreen={handleCapturePcScreen}
                 />
               </div>
             </div>
