@@ -34,6 +34,14 @@ The `web/` package provides the front-end user experience for OverWatch. Designe
 
 ## 🎨 Deck Features & Screens
 
+| 🕰️ Screen 1: Retro Flip Clock | 🤖 Screen 2: AI Mission Control |
+|:---:|:---:|
+| <img src="../docs/screenshots/clock.png" width="400" alt="Screen 1: Clock" /> | <img src="../docs/screenshots/ai%20%20sessions%20and%20prompt.png" width="400" alt="Screen 2: AI Control" /> |
+
+| 🎵 Screen 3: Media & Hardware Telemetry | ⚡ Screen 4: Workstation Macros & Beam Sync |
+|:---:|:---:|
+| <img src="../docs/screenshots/music%20and%20telemetry.png" width="400" alt="Screen 3: Media & Telemetry" /> | <img src="../docs/screenshots/macros%20and%20beam%20sync.png" width="400" alt="Screen 4: Macros & Beam Sync" /> |
+
 ### 1. 🕰️ Screen 1: Retro Flip Clock & Focus Timer
 - **Mechanical Split-Flap Animation**: Realistic 3D card turnover with pure CSS perspective transforms.
 - **Synthesized Web Audio**: Procedurally synthesizes retro mechanical leaf clicks (low-pass filtered white noise burst) without relying on external audio assets.

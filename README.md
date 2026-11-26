@@ -28,19 +28,18 @@
 
 ## 📸 Product Showcase & Preview
 
-<!-- Place your product screenshot or animated demo below -->
 <div align="center">
-  <img src="docs/screenshots/mobile-standby-deck.png" alt="OverWatch Mobile StandBy Desk Deck" width="90%" onerror="this.style.display='none'" />
+  <img src="docs/screenshots/clock.png" alt="OverWatch Mobile StandBy Desk Deck" width="85%" />
   <p><em>Turn your phone into an ambient OLED companion deck for your PC workstation.</em></p>
 </div>
 
-| 🕰️ Screen 1: Retro Flip Clock & Timer | 🎵 Screen 2: Multi-Session Music & PC Telemetry |
+| 🕰️ Screen 1: Retro Flip Clock & Timer | 🤖 Screen 2: AI Mission Control & Interlock |
 |:---:|:---:|
-| <img src="docs/screenshots/screen-1-clock.png" width="380" alt="Screen 1: Clock & Timer" onerror="this.alt='[Screen 1: Flip Clock & Sprint Timer Placeholder]'" /> | <img src="docs/screenshots/screen-2-media.png" width="380" alt="Screen 2: Music & Telemetry" onerror="this.alt='[Screen 2: Music & Telemetry Placeholder]'" /> |
+| <img src="docs/screenshots/clock.png" width="440" alt="Screen 1: Clock & Timer" /> | <img src="docs/screenshots/ai%20%20sessions%20and%20prompt.png" width="440" alt="Screen 2: AI Mission Control" /> |
 
-| 🤖 Screen 3: AI Mission Control & Git Push Beam | ⚡ Screen 4: Workstation Macros & Clipboard Beam |
+| 🎵 Screen 3: WinRT Music & PC Telemetry | ⚡ Screen 4: Workstation Macros & Beam Sync |
 |:---:|:---:|
-| <img src="docs/screenshots/screen-3-agent.png" width="380" alt="Screen 3: AI Control & Git Push" onerror="this.alt='[Screen 3: AI Control & Remote Push Placeholder]'" /> | <img src="docs/screenshots/screen-4-macros.png" width="380" alt="Screen 4: Macros & Clipboard" onerror="this.alt='[Screen 4: Macros & Clipboard Placeholder]'" /> |
+| <img src="docs/screenshots/music%20and%20telemetry.png" width="440" alt="Screen 3: Music & Telemetry" /> | <img src="docs/screenshots/macros%20and%20beam%20sync.png" width="440" alt="Screen 4: Macros & Beam Sync" /> |
 
 ---
 
