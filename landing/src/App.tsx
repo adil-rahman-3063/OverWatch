@@ -148,6 +148,8 @@ export default function App() {
     // Dynamic JSON-LD BreadcrumbList structured data schema
     let breadcrumbScript = document.getElementById('breadcrumb-schema') as HTMLScriptElement | null;
     let faqScript = document.getElementById('faq-schema') as HTMLScriptElement | null;
+    let howtoScript = document.getElementById('howto-schema') as HTMLScriptElement | null;
+    let profileScript = document.getElementById('profile-schema') as HTMLScriptElement | null;
 
     if (tab === 'home') {
       if (breadcrumbScript) breadcrumbScript.remove();
@@ -233,6 +235,72 @@ export default function App() {
         ],
       };
       breadcrumbScript.textContent = JSON.stringify(breadcrumbData);
+    }
+
+    // Google HowTo Schema on /docs
+    if (tab === 'docs') {
+      if (!howtoScript) {
+        howtoScript = document.createElement('script');
+        howtoScript.id = 'howto-schema';
+        howtoScript.type = 'application/ld+json';
+        document.head.appendChild(howtoScript);
+      }
+      const howtoData = {
+        '@context': 'https://schema.org',
+        '@type': 'HowTo',
+        'name': 'How to Set Up OverWatch on Windows and Antigravity IDE',
+        'description': 'Step-by-step setup guide for the OverWatch Windows daemon, Antigravity Auto mode interlock, and mobile StandBy desk deck.',
+        'step': [
+          {
+            '@type': 'HowToStep',
+            'name': 'Automated Workstation Setup',
+            'text': 'Clone the repository and run setup.bat to check Node.js prerequisites, compile packages, and start the client daemon.',
+            'url': `${BASE_DOMAIN}/docs#step-1`,
+          },
+          {
+            '@type': 'HowToStep',
+            'name': 'Configure Antigravity IDE Permissions',
+            'text': 'Open Antigravity Settings > General > Global Permissions and select the Auto preset to delegate tool approvals to OverWatch.',
+            'url': `${BASE_DOMAIN}/docs#step-2`,
+          },
+          {
+            '@type': 'HowToStep',
+            'name': 'Connect Mobile Desk StandBy Deck',
+            'text': 'Open the PWA on an idle phone in landscape mode and pair it with your workstation device channel.',
+            'url': `${BASE_DOMAIN}/docs#step-3`,
+          },
+        ],
+      };
+      howtoScript.textContent = JSON.stringify(howtoData);
+    } else {
+      if (howtoScript) howtoScript.remove();
+    }
+
+    // Google ProfilePage & Person Schema on /developer
+    if (tab === 'developer') {
+      if (!profileScript) {
+        profileScript = document.createElement('script');
+        profileScript.id = 'profile-schema';
+        profileScript.type = 'application/ld+json';
+        document.head.appendChild(profileScript);
+      }
+      const profileData = {
+        '@context': 'https://schema.org',
+        '@type': 'ProfilePage',
+        'mainEntity': {
+          '@type': 'Person',
+          'name': 'Adil Rahman',
+          'url': 'https://adilrahman.cc',
+          'sameAs': [
+            'https://github.com/adil-rahman-3063',
+            'https://adilrahman.cc',
+          ],
+          'jobTitle': 'Software Engineer & System Architect',
+        },
+      };
+      profileScript.textContent = JSON.stringify(profileData);
+    } else {
+      if (profileScript) profileScript.remove();
     }
   };
 
