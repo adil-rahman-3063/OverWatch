@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Bot, Clock, Music, Zap, ShieldAlert, Volume2, VolumeX, Lock, Sparkles 
+  Bot, Clock, Music, Zap, ShieldAlert, Volume2, VolumeX, Lock, Sparkles, Monitor, Smartphone, Battery 
 } from 'lucide-react';
 import { FlipClock } from './deck/FlipClock.tsx';
 import { AgentSessionCard } from './deck/AgentSessionCard.tsx';
@@ -423,12 +423,38 @@ export const LiveDeckSimulator: React.FC = () => {
             <span className="text-neutral-400 hidden sm:inline">120Hz OLED</span>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-              <span className="text-neutral-200 font-medium">PC Live</span>
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Computer Charge (Black & White Computer Icon + Charging/Battery Indicator) */}
+            <div
+              className="flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 rounded bg-[#09090c] border border-[#1b1b22] text-neutral-300"
+              title="Computer: 85% (AC / Charging)"
+            >
+              <Monitor className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white shrink-0" />
+              <span className="font-semibold text-white">85%</span>
+              <span className="inline-flex items-center gap-0.5 text-[8px] font-mono px-1 py-0.2 rounded bg-white text-black font-bold uppercase tracking-tight">
+                <Zap className="w-2 h-2 text-black fill-black shrink-0" />
+                <span>CHG</span>
+              </span>
             </div>
-            <span className="text-neutral-500 hidden sm:inline">sub-50ms</span>
+
+            {/* Dock Mobile Charge (Black & White Mobile Icon + Charging/Battery Indicator) */}
+            <div
+              className="flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 rounded bg-[#09090c] border border-[#1b1b22] text-neutral-300"
+              title="Dock Mobile: 96% (Charging on dock)"
+            >
+              <Smartphone className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white shrink-0" />
+              <span className="font-semibold text-white">96%</span>
+              <span className="inline-flex items-center gap-0.5 text-[8px] font-mono px-1 py-0.2 rounded bg-white text-black font-bold uppercase tracking-tight">
+                <Zap className="w-2 h-2 text-black fill-black shrink-0" />
+                <span>CHG</span>
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5 pl-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+              <span className="text-neutral-200 font-medium hidden xs:inline">PC Live</span>
+            </div>
+            <span className="text-neutral-500 hidden md:inline">sub-50ms</span>
 
             {/* Mute/Sound Toggle */}
             <button

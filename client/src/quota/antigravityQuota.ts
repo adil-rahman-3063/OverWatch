@@ -102,7 +102,7 @@ export class AntigravityQuotaCollector {
         fetchedAt: new Date().toISOString(),
       };
     } catch (err: any) {
-      console.error('[AntigravityQuota] Failed to fetch usage:', err.message);
+      console.warn('[AntigravityQuota] Usage fetch unavailable (CLI not ready or not logged in).');
       return null;
     }
   }

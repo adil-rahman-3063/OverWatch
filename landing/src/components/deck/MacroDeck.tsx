@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, VolumeX, Moon, Terminal, Code2, Check } from 'lucide-react';
+import { Lock, VolumeX, Moon, Terminal, Code2, Camera, Check } from 'lucide-react';
 
 interface MacroDeckProps {
   onMacro: (action: string) => void;
@@ -16,6 +16,7 @@ export const MacroDeck: React.FC<MacroDeckProps> = ({ onMacro }) => {
 
   const macros = [
     { id: 'lock_pc', label: 'Lock PC', icon: Lock },
+    { id: 'screenshot_clipboard', label: 'Screen to Clip', icon: Camera },
     { id: 'turn_off_screens', label: 'Sleep screens', icon: Moon },
     { id: 'volume_mute', label: 'Mute master', icon: VolumeX },
     { id: 'open_terminal', label: 'Terminal', icon: Terminal },

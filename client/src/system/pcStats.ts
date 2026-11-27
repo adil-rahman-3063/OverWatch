@@ -1,6 +1,7 @@
 import os from 'os';
 import { exec } from 'child_process';
 import util from 'util';
+import { capturePrimaryScreenAndSetClipboard } from './imageClipboard.js';
 
 const execPromise = util.promisify(exec);
 
@@ -11,6 +12,11 @@ export interface SystemStats {
   ramUsagePercent: number;
   uptimeHours: number;
   hostname: string;
+  battery?: {
+    hasBattery: boolean;
+    percent: number;
+    isCharging: boolean;
+  };
 }
 
 // Calculate CPU usage by sampling os.cpus() times
@@ -46,6 +52,40 @@ function getCpuUsage(): Promise<number> {
   });
 }
 
+let lastBatteryCheck = 0;
+let cachedBattery: { hasBattery: boolean; percent: number; isCharging: boolean } = {
+  hasBattery: true,
+  percent: 100,
+  isCharging: true,
+};
+
+async function getPcBattery(): Promise<{ hasBattery: boolean; percent: number; isCharging: boolean }> {
+  const now = Date.now();
+  if (now - lastBatteryCheck < 8000 && lastBatteryCheck > 0) {
+    return cachedBattery;
+  }
+  try {
+    const { stdout } = await execPromise(
+      `powershell -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms; $p=[System.Windows.Forms.SystemInformation]::PowerStatus; Write-Output ($p.BatteryLifePercent.ToString() + '|' + $p.PowerLineStatus.ToString() + '|' + $p.BatteryChargeStatus.ToString())"`,
+      { timeout: 3000 }
+    );
+    const parts = stdout.trim().split('|');
+    if (parts.length >= 2) {
+      const pctRaw = parseFloat(parts[0]);
+      const lineStatus = parts[1].trim();
+      const chargeStatus = (parts[2] || '').trim();
+      const hasBattery = !chargeStatus.includes('NoSystemBattery') && pctRaw >= 0;
+      cachedBattery = {
+        hasBattery,
+        percent: hasBattery ? Math.round(pctRaw * 100) : 100,
+        isCharging: lineStatus === 'Online',
+      };
+      lastBatteryCheck = now;
+    }
+  } catch {}
+  return cachedBattery;
+}
+
 export async function getSystemStats(): Promise<SystemStats> {
   const cpuUsagePercent = await getCpuUsage();
   const totalRamBytes = os.totalmem();
@@ -56,6 +96,7 @@ export async function getSystemStats(): Promise<SystemStats> {
   const usedRamGb = parseFloat((usedRamBytes / (1024 ** 3)).toFixed(1));
   const ramUsagePercent = Math.round((usedRamBytes / totalRamBytes) * 100);
   const uptimeHours = parseFloat((os.uptime() / 3600).toFixed(1));
+  const battery = await getPcBattery();
 
   return {
     cpuUsagePercent,
@@ -64,6 +105,7 @@ export async function getSystemStats(): Promise<SystemStats> {
     ramUsagePercent,
     uptimeHours,
     hostname: os.hostname(),
+    battery,
   };
 }
 
@@ -92,6 +134,11 @@ export async function executeMacro(action: string, workspaceDir?: string): Promi
         // Launch Antigravity IDE or VS Code in workspace
         exec(`code "${ideDir}" || start "" "${ideDir}"`);
         return true;
+
+      case 'screenshot_clipboard':
+        // Capture primary laptop/PC screen and copy directly to Windows OS clipboard
+        const screenRes = await capturePrimaryScreenAndSetClipboard();
+        return screenRes.success;
 
       default:
         console.warn(`[Macro] Unknown action: ${action}`);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShieldAlert, Check, X, Terminal, Folder, Bot, SkipForward, Minimize2 } from 'lucide-react';
+import { ShieldAlert, Check, X, Terminal, Folder, Bot, SkipForward, Minimize2, FileText } from 'lucide-react';
 import { PermissionRequest } from './types.ts';
 import { playAlertRingtone } from './sound.ts';
 
@@ -117,7 +117,7 @@ export const ApprovalOverlay: React.FC<ApprovalOverlayProps> = ({ requests, onDe
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500" />
             </span>
             <h3 className="text-xs font-mono font-medium text-amber-300 uppercase tracking-wider">
-              Agent Command Interlock ({totalPending})
+              {activeRequest?.tool?.includes('file') ? 'File Access Interlock' : 'Agent Command Interlock'} ({totalPending})
             </h3>
           </div>
 
@@ -135,7 +135,7 @@ export const ApprovalOverlay: React.FC<ApprovalOverlayProps> = ({ requests, onDe
           </div>
         </div>
 
-        {/* Scrollable Middle Area: Details & Command Preview */}
+        {/* Scrollable Middle Area: Details & Command/File Preview */}
         {activeRequest && (
           <div className="flex-1 min-h-0 overflow-y-auto px-3.5 sm:px-5 py-2.5 space-y-2 sm:space-y-2.5 overscroll-contain">
             <div className="flex items-center justify-between text-xs font-mono">
@@ -143,7 +143,11 @@ export const ApprovalOverlay: React.FC<ApprovalOverlayProps> = ({ requests, onDe
                 <Bot className="w-3.5 h-3.5 text-cyan-400" />
                 {activeRequest.agent || 'Agent'}
               </span>
-              <span className="text-[11px] text-neutral-400 px-2 py-0.5 rounded bg-[#16161c] border border-neutral-800">
+              <span className={`text-[11px] px-2 py-0.5 rounded border ${
+                activeRequest.tool?.includes('file')
+                  ? 'bg-amber-950/40 border-amber-500/50 text-amber-300 font-medium'
+                  : 'bg-[#16161c] border-neutral-800 text-neutral-400'
+              }`}>
                 {activeRequest.tool}
               </span>
             </div>
@@ -157,10 +161,27 @@ export const ApprovalOverlay: React.FC<ApprovalOverlayProps> = ({ requests, onDe
 
             <div className="bg-[#050507] rounded-xl p-2.5 sm:p-3 border border-[#1e1e24] font-mono text-xs text-neutral-200 break-all max-h-24 sm:max-h-36 overflow-y-auto">
               <div className="flex items-center gap-1 text-[9px] text-neutral-500 mb-1">
-                <Terminal className="w-2.5 h-2.5 text-neutral-500" />
-                <span>Command execution</span>
+                {activeRequest.tool?.includes('file') ? (
+                  <>
+                    <FileText className="w-2.5 h-2.5 text-amber-400" />
+                    <span className="text-amber-400/90 font-medium">
+                      {activeRequest.tool === 'read_file'
+                        ? 'External File Read'
+                        : activeRequest.tool === 'write_file'
+                        ? 'File Creation / Overwrite'
+                        : 'File Modification'}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Terminal className="w-2.5 h-2.5 text-neutral-500" />
+                    <span>Command execution</span>
+                  </>
+                )}
               </div>
-              <code className="text-emerald-400 font-medium">{activeRequest.command || '(no command string)'}</code>
+              <code className={activeRequest.tool?.includes('file') ? 'text-amber-300 font-medium' : 'text-emerald-400 font-medium'}>
+                {activeRequest.command || '(no target details)'}
+              </code>
             </div>
           </div>
         )}

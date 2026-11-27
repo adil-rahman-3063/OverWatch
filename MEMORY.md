@@ -526,5 +526,47 @@ To ensure that anyone cloning the repository has an effortless, 1-click setup ex
   - Added dedicated FAQ card on `HomePage.tsx` and in dynamic `FAQPage` schema explaining OverWatch's fail-closed hardware interlock, WinRT media control, and multi-agent support over PhoneBox.
   - Updated `landing/public/llms-full.txt` for AI search grounding.
 
+---
+
+## Log Entry: Full Remote Workspace Interlock, Win32 Foreground Lock Bypass, Laptop Screen-to-Clipboard Macro & Monochrome Power Telemetry
+**Date:** November 27, 2026 — 19:25 IST  
+**Topic:** Remote File Access Interlock (`read_file`, `write_file`, `edit_file`), Win32 Foreground Activation & Keystroke Injection (`AttachThreadInput`), Desktop Screen-to-Clipboard Macro, Monochrome Battery Badges (`CHG` vs `BAT`), and Sequential UTF-8 Logging
+
+### 1. Full Remote Workspace Interlock (External File Access & Modification Gate)
+- **Problem**: When a developer leaves their laptop running at home to control an agent remotely from mobile, Antigravity’s security sandbox displays native popup dialogs on the laptop screen whenever the agent reads or writes files outside the workspace (e.g., `~/.gemini/config/hooks.json`). Because `hooks.json` only matched `"run_command"`, file access requests were never beamed to mobile, permanently freezing agent sessions until someone physically clicked "Allow" on the laptop.
+- **Resolution**:
+  - Expanded `PreToolUse` matcher in `hooks.json` and `setupHooks.ts` to `"run_command|read_file|write_file|edit_file"`.
+  - Implemented smart path filtering in `antigravityHook.ts`:
+    - **Routine Workspace Reads**: If `toolName === 'read_file'` and the target path resolves inside `workspacePaths` or `cwd`, the hook outputs `{ decision: 'allow' }` immediately in `< 5ms`, preventing phone notification spam during normal code inspection.
+    - **External File Access**: If `toolName === 'read_file'` and the target is outside the workspace, the request is beamed to mobile as an external file read request.
+    - **File Writes & Edits**: `write_file` and `edit_file` are beamed to mobile showing target path and action.
+  - Enhanced `ApprovalOverlay.tsx` (across both `web/` and `landing/`):
+    - Added amber `File Access Interlock` card with `FileText` icon and dynamic action labels (`External File Read`, `File Creation / Overwrite`, `File Modification`).
+    - Pinned target file path preview with amber styling.
+  - When approved on mobile, the hook returns `{ decision: 'allow' }`, enabling Antigravity to proceed immediately without prompting the physical laptop display.
+
+### 2. Win32 Foreground Lock Bypass & Agent Prompt Auto-Submit
+- **Problem**: Beamed quick prompts reported "Successfully pasted and submitted prompt", but failed to type into the agent chat. Windows NT restricts background processes from stealing window focus (`SPI_SETFOREGROUNDLOCKTIMEOUT`), causing `WScript.Shell.AppActivate` to fail silently. Furthermore, sending `{ENTER}` directly to an unfocused IDE editor tab inserted a newline in source code rather than submitting to the agent.
+- **Resolution**:
+  - Created `client/src/system/promptInjector.ts` using Win32 P/Invoke APIs (`AttachThreadInput`, `SetForegroundWindow`, `BringWindowToTop`, and `ShowWindow(SW_RESTORE)`).
+  - Implemented a multi-level window resolver matching the active workspace subfolder, parent folder, `Antigravity`, `Code`, or terminal.
+  - Once foreground lock is broken, sends `Ctrl+L` to explicitly focus the Antigravity/VS Code Chat input bar, sets the prompt on the clipboard, pastes (`Ctrl+V`), and submits (`Enter`).
+
+### 3. Screen-to-Clipboard Desktop Macro
+- Added a 6th macro button **"Screen to Clip"** (`screenshot_clipboard` with `Camera` icon) across `MacroDeck.tsx` in `web/` and `landing/`.
+- Executed via `screencap.exe -capture` to capture the primary monitor, followed by `screencap.exe -set` to place the bitmap directly onto the Windows OS clipboard for instant `Ctrl+V` pasting.
+- Full-res PNG is archived to `Pictures/OverWatch/Screenshots/`, and a native dark HUD toast notification confirms capture.
+
+### 4. Monochrome Battery & Power State Telemetry
+- Integrated laptop and mobile battery monitoring in the top navigation bar with clean black-and-white iconography:
+  - **PC Battery**: Monochrome `Monitor` icon + battery % from .NET `PowerStatus`, with explicit `CHG` ⚡ (charging / AC online) vs `BAT` (running on battery) badges. Cached for 8–10 seconds to eliminate subprocess polling overhead.
+  - **Dock Mobile Battery**: Monochrome `Smartphone` icon + battery % from `navigator.getBattery()`, with matching `CHG` ⚡ and `BAT` badges.
+- Mirrored across both `web/src/App.tsx` and `landing/src/components/LiveDeckSimulator.tsx`.
+
+### 5. Clean UTF-8 `daemon.log` & Automated Exit Cleanup
+- Replaced multi-threaded asynchronous event redirection in `tray.ps1` with direct shell streaming: `cmd.exe /c "node dist\index.js > daemon.log 2>&1"`. Output in `daemon.log` is now formatted identically to Command Prompt in clean sequential UTF-8 with uncorrupted ASCII art.
+- Implemented `Clear-DaemonLog` function hooked into tray menu exit, daemon restart, and `PowerShell.Exiting` engine shutdown, ensuring `daemon.log` is wiped clean whenever OverWatch terminates.
+
+
 
 

@@ -42,12 +42,12 @@ async function setupAntigravityHooks() {
     return;
   }
 
-  // Add OverWatch hook for run_command
+  // Add OverWatch hook for run_command and file access tools (read, write, edit)
   hooksConfig['overwatch-gate'] = {
     enabled: true,
     PreToolUse: [
       {
-        matcher: "run_command",
+        matcher: "run_command|read_file|write_file|edit_file",
         hooks: [
           {
             type: "command",

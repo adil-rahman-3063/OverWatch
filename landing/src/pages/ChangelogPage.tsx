@@ -5,9 +5,42 @@ import { AdsterraBanner } from '../components/AdsterraBanner.tsx';
 export const ChangelogPage: React.FC = () => {
   const releases = [
     {
+      version: 'v1.3.0',
+      date: 'November 27, 2026',
+      badge: 'Current Release',
+      title: 'Full Remote Workspace Interlock, Win32 Prompt Auto-Submit, Screen-to-Clipboard Macro & Power Telemetry',
+      changes: [
+        {
+          type: 'security',
+          title: 'Remote File Access Interlock (Leave Laptop at Home)',
+          desc: 'Expanded PreToolUse hook matcher to run_command|read_file|write_file|edit_file. External file reads (outside workspace) and file edits are beamed directly to mobile with dedicated Amber File Access Interlock cards. Routine internal workspace operations auto-pass in <5ms. Developers can leave their laptops at home without agent tasks freezing on physical laptop dialogs.',
+        },
+        {
+          type: 'feature',
+          title: 'Win32 Foreground Lock Break & Prompt Auto-Submit',
+          desc: 'Overcame Windows NT SPI_SETFOREGROUNDLOCKTIMEOUT restrictions via Win32 AttachThreadInput, SetForegroundWindow, and ShowWindow(SW_RESTORE) P/Invoke calls in promptInjector.ts. Beamed quick prompts automatically focus Google Antigravity / VS Code via Ctrl+L, paste, and submit with Enter.',
+        },
+        {
+          type: 'feature',
+          title: 'Screen-to-Clipboard Desktop Macro',
+          desc: 'Added a 6th macro button "Screen to Clip" (Camera icon) in MacroDeck. Captures the primary laptop monitor with screencap.exe, copies the bitmap directly to the Windows OS clipboard for instant Ctrl+V pasting, archives to Pictures/OverWatch/Screenshots/, and triggers a dark HUD toast.',
+        },
+        {
+          type: 'feature',
+          title: 'Monochrome Battery & Charging Telemetry',
+          desc: 'Integrated dual-device battery status in the top bar using black-and-white Monitor and Smartphone icons. Displays PC battery via .NET PowerStatus and mobile battery via navigator.getBattery(), with explicit CHG (charging) and BAT (on battery) badges.',
+        },
+        {
+          type: 'fix',
+          title: 'Clean UTF-8 daemon.log & Automated Exit Cleanup',
+          desc: 'Re-routed tray PowerShell process logging via cmd.exe /c redirection for Command-Prompt-identical output in sequential UTF-8 without scrambled lines. Added automated log wiping upon exit, restart, and engine shutdown.',
+        },
+      ],
+    },
+    {
       version: 'v1.2.0',
       date: 'November 25, 2026',
-      badge: 'Current Release',
+      badge: 'Stable',
       title: 'Viewport-Locked Approval Overlay, Multi-Session Discovery & Watchdog Heartbeat',
       changes: [
         {

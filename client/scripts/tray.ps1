@@ -10,6 +10,15 @@ $icoPath = Join-Path $clientRoot "assets\overwatch.ico"
 $logPath = Join-Path $clientRoot "daemon.log"
 $nodeScript = Join-Path $clientRoot "dist\index.js"
 
+function Clear-DaemonLog {
+    try {
+        [System.IO.File]::WriteAllText($logPath, "", [System.Text.Encoding]::UTF8)
+    } catch {}
+}
+
+# Clear log at startup so current session starts clean and neat
+Clear-DaemonLog
+
 # 1. Ensure client build exists
 if (-not (Test-Path $nodeScript)) {
     Write-Host "[OverWatch Tray] Compiling client first..." -ForegroundColor Yellow
@@ -53,48 +62,21 @@ function Start-DaemonProcess {
     $nodeCmd = Get-Command node.exe -ErrorAction SilentlyContinue
     $nodeExe = if ($nodeCmd) { $nodeCmd.Source } else { "node.exe" }
 
+    # Redirect output directly to daemon.log via shell redirection so output is
+    # formatted neatly in exact stream order, identical to Command Prompt.
     $psi = New-Object System.Diagnostics.ProcessStartInfo
-    $psi.FileName = $nodeExe
-    $psi.Arguments = "`"$nodeScript`""
+    $psi.FileName = "cmd.exe"
+    $psi.Arguments = "/c `"`"$nodeExe`" `"$nodeScript`" > `"$logPath`" 2>&1`""
     $psi.WorkingDirectory = $clientRoot.Path
     $psi.UseShellExecute = $false
     $psi.CreateNoWindow = $true
     $psi.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
-    $psi.RedirectStandardOutput = $true
-    $psi.RedirectStandardError = $true
 
     $proc = New-Object System.Diagnostics.Process
     $proc.StartInfo = $psi
     $proc.EnableRaisingEvents = $true
 
-    # Log startup banner cleanly without file locking
-    $startBanner = "`r`n=== [OverWatch Started: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] ===`r`n"
-    try {
-        [System.IO.File]::AppendAllText($logPath, $startBanner)
-    } catch {}
-
-    Register-ObjectEvent -InputObject $proc -EventName OutputDataReceived -Action {
-        if ($EventArgs.Data) {
-            try {
-                $msg = "[$([DateTime]::Now.ToString('HH:mm:ss'))] " + $EventArgs.Data + "`r`n"
-                [System.IO.File]::AppendAllText($Event.MessageData, $msg)
-            } catch {}
-        }
-    } -MessageData $logPath | Out-Null
-
-    Register-ObjectEvent -InputObject $proc -EventName ErrorDataReceived -Action {
-        if ($EventArgs.Data) {
-            try {
-                $msg = "[$([DateTime]::Now.ToString('HH:mm:ss')) ERR] " + $EventArgs.Data + "`r`n"
-                [System.IO.File]::AppendAllText($Event.MessageData, $msg)
-            } catch {}
-        }
-    } -MessageData $logPath | Out-Null
-
     $proc.Start() | Out-Null
-    $proc.BeginOutputReadLine()
-    $proc.BeginErrorReadLine()
-
     $script:daemonProc = $proc
 }
 
@@ -139,6 +121,7 @@ $contextMenu.Items.Add($menuLogs) | Out-Null
 $menuRestart = New-Object System.Windows.Forms.ToolStripMenuItem "Restart Daemon"
 $menuRestart.Add_Click({
     Stop-StaleProcesses
+    Clear-DaemonLog
     Start-DaemonProcess
     $script:notifyIcon.ShowBalloonTip(2000, "OverWatch", "Daemon restarted successfully.", [System.Windows.Forms.ToolTipIcon]::Info)
 })
@@ -153,6 +136,7 @@ $menuExit.Add_Click({
         try { $script:daemonProc.Kill() } catch {}
     }
     Stop-StaleProcesses
+    Clear-DaemonLog
     $script:notifyIcon.Dispose()
     [System.Windows.Forms.Application]::Exit()
     Stop-Process -Id $PID -Force
@@ -175,16 +159,17 @@ $watchdogTimer = New-Object System.Windows.Forms.Timer
 $watchdogTimer.Interval = 5000
 $watchdogTimer.Add_Tick({
     if ($script:daemonProc -and $script:daemonProc.HasExited) {
-        $exitCode = $script:daemonProc.ExitCode
-        $logMsg = "[$([DateTime]::Now.ToString('HH:mm:ss')) ERR] OverWatch daemon exited unexpectedly with code $exitCode. Restarting...`r`n"
-        try { [System.IO.File]::AppendAllText($logPath, $logMsg) } catch {}
-        
         $script:notifyIcon.Text = "OverWatch • Daemon Restarting..."
         Start-DaemonProcess
         $script:notifyIcon.Text = "OverWatch • Mobile Interlock (Live)"
     }
 })
 $watchdogTimer.Start()
+
+# Register exit handler to always clear daemon.log on exit
+Register-EngineEvent PowerShell.Exiting -Action {
+    Clear-DaemonLog
+} | Out-Null
 
 # Show balloon tip on initial launch
 $script:notifyIcon.ShowBalloonTip(5000, "OverWatch is Live", "Running silently in tray. Click '^' on your taskbar if hidden.", [System.Windows.Forms.ToolTipIcon]::Info)

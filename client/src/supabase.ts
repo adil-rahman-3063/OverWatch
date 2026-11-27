@@ -8,6 +8,7 @@ import { AntigravityQuotaData } from './quota/antigravityQuota.js';
 import { SystemStats, executeMacro } from './system/pcStats.js';
 import { AgentSessionState, agentSessionMonitor } from './session/agentSession.js';
 import { setWindowsClipboard, getWindowsClipboard } from './system/clipboard.js';
+import { injectPromptToWindow } from './system/promptInjector.js';
 import {
   getPrimaryLanIp,
   saveImageAndSetClipboard,
@@ -28,6 +29,7 @@ export interface PendingRequest {
 export class SupabaseService {
   private client: SupabaseClient;
   private channel: RealtimeChannel | null = null;
+  private isSubscribed: boolean = false;
   private pendingRequests = new Map<string, PendingRequest>();
 
   constructor() {
@@ -112,28 +114,40 @@ export class SupabaseService {
 
       if (typeof text === 'string' && text.trim().length > 0) {
         console.log(`[AgentPrompt] Received mobile prompt for [${workspaceName || 'active session'}]: "${text.slice(0, 60)}"`);
-        await setWindowsClipboard(text);
+        const clipSuccess = await setWindowsClipboard(text);
 
         if (payload?.autoSend) {
-          try {
-            const execPromise = util.promisify(exec);
-            const targetName = workspaceName ? workspaceName.replace(/["`$]/g, '') : 'Antigravity';
-            const psScript = `
-              $wshell = New-Object -ComObject wscript.shell;
-              $activated = $wshell.AppActivate('${targetName}');
-              if (-not $activated) { $activated = $wshell.AppActivate('Antigravity'); }
-              if (-not $activated) { $wshell.AppActivate('Visual Studio Code'); }
-              Start-Sleep -Milliseconds 120;
-              $wshell.SendKeys('^v');
-              Start-Sleep -Milliseconds 60;
-              $wshell.SendKeys('{ENTER}');
-            `;
-            const base64 = Buffer.from(psScript, 'utf16le').toString('base64');
-            await execPromise(`powershell -NoProfile -NonInteractive -EncodedCommand ${base64}`);
-            console.log(`[AgentPrompt] Successfully pasted and submitted prompt.`);
-          } catch (err: any) {
-            console.warn('[AgentPrompt] SendKeys automated entry failed:', err.message);
+          const res = await injectPromptToWindow(workspace, text);
+          if (res.success) {
+            console.log(`[AgentPrompt] Successfully focused "${res.targetTitle}" (${res.targetProcess}) and submitted prompt.`);
+          } else {
+            console.warn(`[AgentPrompt] Prompt copied to clipboard, but could not auto-focus window (${res.error}). Press Ctrl+V in your editor to paste.`);
           }
+
+          if (this.channel && this.isSubscribed) {
+            await this.channel.send({
+              type: 'broadcast',
+              event: 'agent:prompt_status',
+              payload: {
+                success: res.success,
+                windowTitle: res.targetTitle,
+                message: res.success
+                  ? `Prompt submitted to ${res.targetTitle}`
+                  : `Prompt copied to clipboard! (Window not focused)`,
+                timestamp: new Date().toISOString(),
+              },
+            });
+          }
+        } else if (clipSuccess && this.channel && this.isSubscribed) {
+          await this.channel.send({
+            type: 'broadcast',
+            event: 'agent:prompt_status',
+            payload: {
+              success: true,
+              message: 'Prompt beamed to Windows clipboard (Ctrl+V ready)',
+              timestamp: new Date().toISOString(),
+            },
+          });
         }
       }
     });
@@ -301,9 +315,10 @@ export class SupabaseService {
     this.channel.subscribe((status) => {
       console.log(`[Supabase] Realtime channel status: ${status}`);
       if (status === 'SUBSCRIBED') {
+        this.isSubscribed = true;
         this.publishHeartbeat().catch(() => {});
-      }
-      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        this.isSubscribed = false;
         console.warn(`[Supabase] Re-subscribing in 2.5s due to ${status}...`);
         setTimeout(() => {
           this.channel?.subscribe();
@@ -327,7 +342,7 @@ export class SupabaseService {
 
   async publishMediaState(media: MediaInfo): Promise<void> {
     try {
-      if (this.channel) {
+      if (this.channel && this.isSubscribed) {
         await this.channel.send({
           type: 'broadcast',
           event: 'media:state',
@@ -351,7 +366,7 @@ export class SupabaseService {
 
   async publishQuotaState(quota: AntigravityQuotaData): Promise<void> {
     try {
-      if (this.channel) {
+      if (this.channel && this.isSubscribed) {
         await this.channel.send({
           type: 'broadcast',
           event: 'quota:state',
@@ -373,7 +388,7 @@ export class SupabaseService {
 
   async publishSystemStats(stats: SystemStats): Promise<void> {
     try {
-      if (this.channel) {
+      if (this.channel && this.isSubscribed) {
         await this.channel.send({
           type: 'broadcast',
           event: 'telemetry:state',
@@ -389,7 +404,7 @@ export class SupabaseService {
 
   async publishSessionState(session: AgentSessionState): Promise<void> {
     try {
-      if (this.channel) {
+      if (this.channel && this.isSubscribed) {
         await this.channel.send({
           type: 'broadcast',
           event: 'session:state',
@@ -405,7 +420,7 @@ export class SupabaseService {
 
   async publishHeartbeat(): Promise<void> {
     try {
-      if (this.channel) {
+      if (this.channel && this.isSubscribed) {
         await this.channel.send({
           type: 'broadcast',
           event: 'client:heartbeat',

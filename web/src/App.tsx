@@ -9,7 +9,7 @@ import { AgentSessionCard } from './components/AgentSessionCard.tsx';
 import { AgentPromptDeck } from './components/AgentPromptDeck.tsx';
 import { ApprovalOverlay } from './components/ApprovalOverlay.tsx';
 import { PinLock } from './components/PinLock.tsx';
-import { Lock } from 'lucide-react';
+import { Lock, Monitor, Smartphone, Zap, Battery } from 'lucide-react';
 import { AgentSessionState, MediaState, PermissionRequest, QuotaData, SystemStats } from './types.ts';
 import { playAlertRingtone, unlockAudio } from './utils/sound.ts';
 
@@ -64,6 +64,28 @@ export default function App() {
   const [pcClipboardText, setPcClipboardText] = useState<string>('');
   const [lanIp, setLanIp] = useState<string>('127.0.0.1');
   const [localPort, setLocalPort] = useState<number>(49152);
+  const [mobileBattery, setMobileBattery] = useState<{ percent: number; isCharging: boolean }>({
+    percent: 100,
+    isCharging: true,
+  });
+
+  // Track dock mobile battery via HTML5 Battery Status API
+  useEffect(() => {
+    const nav: any = navigator;
+    if (nav && typeof nav.getBattery === 'function') {
+      nav.getBattery().then((battery: any) => {
+        const update = () => {
+          setMobileBattery({
+            percent: Math.round(battery.level * 100),
+            isCharging: Boolean(battery.charging),
+          });
+        };
+        update();
+        battery.addEventListener('levelchange', update);
+        battery.addEventListener('chargingchange', update);
+      }).catch(() => {});
+    }
+  }, []);
 
   const channelRef = useRef<any>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -715,15 +737,60 @@ export default function App() {
       <ApprovalOverlay requests={requests} onDecision={handleDecision} />
 
       {/* Top minimal status bar */}
-      <div className="flex items-center justify-between px-4 sm:px-6 py-1.5 sm:py-2 bg-black z-30 shrink-0 border-b border-[#141418]">
+      <div className="flex items-center justify-between px-3 sm:px-6 py-1.5 sm:py-2 bg-black z-30 shrink-0 border-b border-[#141418]">
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-mono text-neutral-500 font-medium tracking-wider">
+          <span className="text-[10px] sm:text-[11px] font-mono text-neutral-500 font-medium tracking-wider">
             STANDBY • {deviceId}
           </span>
         </div>
 
-        <div className="flex items-center gap-3 font-mono text-[11px] tabular-nums">
-          <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2 sm:gap-3 font-mono text-[10px] sm:text-[11px] tabular-nums">
+          {/* Computer Charge (Black & White Computer Icon + Charging/Battery Indicator) */}
+          <div
+            className="flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 rounded bg-[#09090c] border border-[#1b1b22] text-neutral-300 transition-colors"
+            title={stats?.battery ? `Computer: ${stats.battery.percent}% (${stats.battery.isCharging ? 'AC / Charging' : 'On Battery'})` : 'Computer Power'}
+          >
+            <Monitor className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white shrink-0" />
+            <span className="font-semibold text-white">
+              {isPcOnline && stats?.battery ? `${stats.battery.percent}%` : isPcOnline ? '100%' : '--'}
+            </span>
+            {isPcOnline && stats?.battery?.isCharging ? (
+              <span className="inline-flex items-center gap-0.5 text-[8px] font-mono px-1 py-0.2 rounded bg-white text-black font-bold uppercase tracking-tight">
+                <Zap className="w-2 h-2 text-black fill-black shrink-0" />
+                <span>CHG</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-0.5 text-[8px] font-mono px-1 py-0.2 rounded bg-[#161620] text-neutral-400 font-semibold uppercase tracking-tight">
+                <Battery className="w-2.5 h-2.5 text-neutral-400 shrink-0" />
+                <span>BAT</span>
+              </span>
+            )}
+          </div>
+
+          {/* Dock Mobile Charge (Black & White Mobile Icon + Charging/Battery Indicator) */}
+          <div
+            className="flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 rounded bg-[#09090c] border border-[#1b1b22] text-neutral-300 transition-colors"
+            title={`Dock Mobile: ${mobileBattery.percent}% (${mobileBattery.isCharging ? 'Charging on dock' : 'On Battery'})`}
+          >
+            <Smartphone className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white shrink-0" />
+            <span className="font-semibold text-white">
+              {mobileBattery.percent}%
+            </span>
+            {mobileBattery.isCharging ? (
+              <span className="inline-flex items-center gap-0.5 text-[8px] font-mono px-1 py-0.2 rounded bg-white text-black font-bold uppercase tracking-tight">
+                <Zap className="w-2 h-2 text-black fill-black shrink-0" />
+                <span>CHG</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-0.5 text-[8px] font-mono px-1 py-0.2 rounded bg-[#161620] text-neutral-400 font-semibold uppercase tracking-tight">
+                <Battery className="w-2.5 h-2.5 text-neutral-400 shrink-0" />
+                <span>BAT</span>
+              </span>
+            )}
+          </div>
+
+          {/* PC Connection Status */}
+          <div className="flex items-center gap-1.5 pl-0.5">
             <span
               className={`w-1.5 h-1.5 rounded-full transition-all ${
                 isPcOnline
@@ -733,7 +800,7 @@ export default function App() {
                   : 'bg-neutral-600'
               }`}
             />
-            <span className={isPcOnline ? 'text-neutral-200 font-medium' : 'text-neutral-500'}>
+            <span className={isPcOnline ? 'text-neutral-200 font-medium hidden xs:inline' : 'text-neutral-500 hidden xs:inline'}>
               {isPcOnline ? 'PC Live' : connected ? 'PC Offline' : 'Offline'}
             </span>
           </div>

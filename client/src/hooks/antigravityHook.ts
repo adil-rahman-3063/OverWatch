@@ -6,7 +6,7 @@ import os from 'os';
 
 /**
  * Antigravity PreToolUse Hook
- * Invoked by Antigravity whenever a tool (e.g. run_command) is called.
+ * Invoked by Antigravity whenever a tool (run_command, read_file, write_file, edit_file) is called.
  * Receives JSON on stdin, queries the OverWatch daemon, and returns JSON decision on stdout.
  */
 
@@ -19,6 +19,7 @@ interface HookInput {
   cwd?: string;
   conversationId?: string;
   hookEventName?: string;
+  workspacePaths?: string[];
 }
 
 async function readStdin(): Promise<string> {
@@ -28,6 +29,15 @@ async function readStdin(): Promise<string> {
     process.stdin.on('data', (chunk) => (data += chunk));
     process.stdin.on('end', () => resolve(data));
   });
+}
+
+function isPathInside(targetPath: string, parentDir: string): boolean {
+  try {
+    const rel = path.relative(path.resolve(parentDir), path.resolve(targetPath));
+    return !rel.startsWith('..') && !path.isAbsolute(rel);
+  } catch {
+    return false;
+  }
 }
 
 async function main() {
@@ -60,8 +70,38 @@ async function main() {
 
   const toolName = hookInput.toolCall?.name || 'unknown';
   const args = hookInput.toolCall?.args || {};
-  const command = (args.CommandLine || args.command || JSON.stringify(args) || '').trim();
   const cwd = hookInput.cwd || process.cwd();
+  const workspaces = (hookInput.workspacePaths && hookInput.workspacePaths.length > 0)
+    ? hookInput.workspacePaths
+    : [cwd];
+
+  // 1. Intelligent Filtering for Workspace File Operations
+  // Routine edits, writes, and reads inside the project workspace execute with zero latency
+  if (toolName === 'read_file' || toolName === 'write_file' || toolName === 'edit_file') {
+    const targetPath = args.Path || args.path || args.file || '';
+    if (targetPath) {
+      const isInside = workspaces.some((ws) => isPathInside(targetPath, ws));
+      if (isInside) {
+        // Internal project operation: auto-allow immediately
+        process.stdout.write(JSON.stringify({ decision: 'allow' }));
+        process.exit(0);
+      }
+    }
+  }
+
+  // 2. Format request representation for mobile screen
+  let displayCommand = '';
+  if (toolName === 'run_command') {
+    displayCommand = (args.CommandLine || args.command || '').trim();
+  } else if (toolName === 'read_file') {
+    displayCommand = `Read outside workspace: ${args.Path || args.path || args.file || ''}`;
+  } else if (toolName === 'write_file') {
+    displayCommand = `Write outside workspace: ${args.Path || args.path || args.file || ''}`;
+  } else if (toolName === 'edit_file') {
+    displayCommand = `Edit outside workspace: ${args.Path || args.path || args.file || ''}`;
+  } else {
+    displayCommand = (args.CommandLine || args.command || args.Path || JSON.stringify(args) || '').trim();
+  }
 
   const IPC_PORT = process.env.LOCAL_IPC_PORT || '49152';
   const url = `http://127.0.0.1:${IPC_PORT}/hook`;
@@ -77,7 +117,7 @@ async function main() {
       body: JSON.stringify({
         agent: 'antigravity',
         tool: toolName,
-        command: command,
+        command: displayCommand,
         cwd: cwd,
       }),
       signal: controller.signal,
@@ -93,10 +133,10 @@ async function main() {
       if (decision === 'allow') {
         const payload: Record<string, any> = {
           decision: 'allow',
-          reason: 'OverWatch mobile confirmed and approved command execution.',
+          reason: 'OverWatch mobile confirmed and approved tool execution.',
         };
-        if (command) {
-          const firstWord = command.split(/\s+/)[0];
+        if (toolName === 'run_command' && displayCommand) {
+          const firstWord = displayCommand.split(/\s+/)[0];
           payload.permissionOverrides = [`command(${firstWord})`];
         }
         process.stdout.write(JSON.stringify(payload));
@@ -105,7 +145,7 @@ async function main() {
         process.stdout.write(
           JSON.stringify({
             decision: 'deny',
-            reason: `OverWatch mobile rejected command (decision: ${decision || 'denied'}).`,
+            reason: `OverWatch mobile rejected request (decision: ${decision || 'denied'}).`,
           })
         );
         process.exit(0);
@@ -114,17 +154,22 @@ async function main() {
       process.stdout.write(
         JSON.stringify({
           decision: 'deny',
-          reason: 'OverWatch daemon returned non-200. Fail-closed: command blocked.',
+          reason: 'OverWatch daemon returned non-200. Fail-closed: execution blocked.',
         })
       );
       process.exit(0);
     }
   } catch (err: any) {
-    // If mobile times out, disconnected, or daemon offline -> STRICT FAIL-CLOSED (DENY)
+    // If daemon is offline (not started), allow graceful transparent pass-through
+    if (err?.cause?.code === 'ECONNREFUSED' || err?.message?.includes('fetch failed')) {
+      process.exit(0);
+    }
+
+    // If mobile timed out while daemon was online -> STRICT FAIL-CLOSED (DENY)
     process.stdout.write(
       JSON.stringify({
         decision: 'deny',
-        reason: 'OverWatch mobile approval not granted (timed out or offline). Command blocked.',
+        reason: 'OverWatch mobile approval not granted (timed out or disconnected). Blocked.',
       })
     );
     process.exit(0);

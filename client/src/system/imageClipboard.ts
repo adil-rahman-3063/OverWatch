@@ -192,3 +192,35 @@ export async function capturePrimaryScreen(): Promise<{ success: boolean; base64
     return { success: false, error: err.message };
   }
 }
+
+/**
+ * Captures primary laptop/desktop screen, saves PNG, and sets Windows OS Clipboard (Ctrl+V ready).
+ */
+export async function capturePrimaryScreenAndSetClipboard(): Promise<{ success: boolean; filePath?: string; error?: string }> {
+  try {
+    const res = await capturePrimaryScreen();
+    if (!res.success || !res.filePath) {
+      return { success: false, error: res.error || 'Screen capture failed' };
+    }
+
+    const screencapExe = await ensureScreencapBinary();
+    if (fs.existsSync(screencapExe)) {
+      await execPromise(`"${screencapExe}" -set "${res.filePath}"`);
+      console.log(`[Macro] Screenshot of laptop copied to Windows clipboard: ${res.filePath}`);
+
+      try {
+        const child = spawn(
+          screencapExe,
+          ['-notify', 'OverWatch • Screenshot Captured', 'Laptop screen copied to Clipboard • Ready to Ctrl+V'],
+          { detached: true, stdio: 'ignore' }
+        );
+        child.unref();
+      } catch {}
+    }
+
+    return { success: true, filePath: res.filePath };
+  } catch (err: any) {
+    console.error('[Macro] Failed to capture and copy screenshot:', err.message);
+    return { success: false, error: err.message };
+  }
+}

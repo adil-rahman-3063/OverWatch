@@ -58,6 +58,11 @@ export interface SystemStats {
   ramUsagePercent: number;
   uptimeHours: number;
   hostname: string;
+  battery?: {
+    hasBattery: boolean;
+    percent: number;
+    isCharging: boolean;
+  };
 }
 
 export interface AgentSessionAction {
