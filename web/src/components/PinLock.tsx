@@ -25,7 +25,7 @@ export const PinLock: React.FC<PinLockProps> = ({ expectedPin, onAuthenticated }
         }
         setTimeout(() => {
           onAuthenticated();
-        }, 400);
+        }, 100);
       } else {
         setHasError(true);
         if (navigator.vibrate) {

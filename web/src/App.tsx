@@ -64,18 +64,22 @@ export default function App() {
   const [pcClipboardText, setPcClipboardText] = useState<string>('');
   const [lanIp, setLanIp] = useState<string>('127.0.0.1');
   const [localPort, setLocalPort] = useState<number>(49152);
-  const [mobileBattery, setMobileBattery] = useState<{ percent: number; isCharging: boolean }>({
-    percent: 100,
-    isCharging: true,
+  const [mobileBattery, setMobileBattery] = useState<{
+    supported: boolean;
+    percent?: number;
+    isCharging?: boolean;
+  }>({
+    supported: false,
   });
 
-  // Track dock mobile battery via HTML5 Battery Status API
+  // Track dock mobile battery via HTML5 Battery Status API (Supported on Chrome/Android; Restricted by Apple on Safari/iOS)
   useEffect(() => {
     const nav: any = navigator;
     if (nav && typeof nav.getBattery === 'function') {
       nav.getBattery().then((battery: any) => {
         const update = () => {
           setMobileBattery({
+            supported: true,
             percent: Math.round(battery.level * 100),
             isCharging: Boolean(battery.charging),
           });
@@ -89,8 +93,24 @@ export default function App() {
 
   const channelRef = useRef<any>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const clipboardImageResolversRef = useRef<Array<(data: { hasImage: boolean; base64?: string }) => void>>([]);
   const screenImageResolversRef = useRef<Array<(data: { success: boolean; base64?: string }) => void>>([]);
+
+  // Keyboard navigation for desktop testing
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') {
+        setActivePageIndex((p) => Math.min(3, p + 1));
+      } else if (e.key === 'ArrowLeft') {
+        setActivePageIndex((p) => Math.max(0, p - 1));
+      } else if (['1', '2', '3', '4'].includes(e.key)) {
+        setActivePageIndex(parseInt(e.key) - 1);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // =========================================================================
   // 1. Bulletproof Screen Wake Lock (Native API + Silent Video Keep-Alive)
@@ -656,20 +676,6 @@ export default function App() {
     }
   };
 
-  if (!isAuthenticated) {
-    return (
-      <PinLock
-        expectedPin={EXPECTED_PIN}
-        onAuthenticated={() => {
-          unlockAudio();
-          setIsAuthenticated(true);
-        }}
-      />
-    );
-  }
-
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
-
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartRef.current = {
       x: e.touches[0].clientX,
@@ -702,25 +708,20 @@ export default function App() {
     }
   };
 
-  // Keyboard navigation for desktop testing
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight') {
-        setActivePageIndex((p) => Math.min(3, p + 1));
-      } else if (e.key === 'ArrowLeft') {
-        setActivePageIndex((p) => Math.max(0, p - 1));
-      } else if (['1', '2', '3', '4'].includes(e.key)) {
-        setActivePageIndex(parseInt(e.key) - 1);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
   const isPcOnline = connected && lastSeenPc > 0 && (now - lastSeenPc < 7500);
 
   return (
     <div className="fixed inset-0 w-full h-[100dvh] bg-black text-[#f4f4f5] flex flex-col overflow-hidden font-sans antialiased select-none">
+      {/* PIN Security Shield Overlay (Rendered as overlay so background mounts immediately & hook order is 100% invariant) */}
+      {!isAuthenticated && (
+        <PinLock
+          expectedPin={EXPECTED_PIN}
+          onAuthenticated={() => {
+            unlockAudio();
+            setIsAuthenticated(true);
+          }}
+        />
+      )}
       {/* Invisible silent keep-awake video tag for mobile browsers */}
       <video
         ref={videoRef}
@@ -770,21 +771,28 @@ export default function App() {
           {/* Dock Mobile Charge (Black & White Mobile Icon + Charging/Battery Indicator) */}
           <div
             className="flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 rounded bg-[#09090c] border border-[#1b1b22] text-neutral-300 transition-colors"
-            title={`Dock Mobile: ${mobileBattery.percent}% (${mobileBattery.isCharging ? 'Charging on dock' : 'On Battery'})`}
+            title={mobileBattery.supported ? `Dock Mobile: ${mobileBattery.percent}% (${mobileBattery.isCharging ? 'Charging on dock' : 'On Battery'})` : 'Mobile docked in StandBy (Safari on iOS restricts Battery API)'}
           >
             <Smartphone className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white shrink-0" />
             <span className="font-semibold text-white">
-              {mobileBattery.percent}%
+              {mobileBattery.supported ? `${mobileBattery.percent}%` : 'DOCK'}
             </span>
-            {mobileBattery.isCharging ? (
-              <span className="inline-flex items-center gap-0.5 text-[8px] font-mono px-1 py-0.2 rounded bg-white text-black font-bold uppercase tracking-tight">
+            {mobileBattery.supported ? (
+              mobileBattery.isCharging ? (
+                <span className="inline-flex items-center gap-0.5 text-[8px] font-mono px-1 py-0.2 rounded bg-white text-black font-bold uppercase tracking-tight">
+                  <Zap className="w-2 h-2 text-black fill-black shrink-0" />
+                  <span>CHG</span>
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-0.5 text-[8px] font-mono px-1 py-0.2 rounded bg-[#161620] text-neutral-400 font-semibold uppercase tracking-tight">
+                  <Battery className="w-2.5 h-2.5 text-neutral-400 shrink-0" />
+                  <span>BAT</span>
+                </span>
+              )
+            ) : (
+              <span className="inline-flex items-center gap-0.5 text-[8px] font-mono px-1 py-0.2 rounded bg-white text-black font-bold uppercase tracking-tight" title="Safari on iOS restricts battery level for privacy; docked in StandBy">
                 <Zap className="w-2 h-2 text-black fill-black shrink-0" />
                 <span>CHG</span>
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-0.5 text-[8px] font-mono px-1 py-0.2 rounded bg-[#161620] text-neutral-400 font-semibold uppercase tracking-tight">
-                <Battery className="w-2.5 h-2.5 text-neutral-400 shrink-0" />
-                <span>BAT</span>
               </span>
             )}
           </div>
